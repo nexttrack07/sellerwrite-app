@@ -1,6 +1,5 @@
 import { notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import axios from 'redaxios'
 
 export type PostType = {
   id: string
@@ -12,26 +11,37 @@ export const fetchPost = createServerFn({ method: 'GET' })
   .validator((d: string) => d)
   .handler(async ({ data: postId }) => {
     console.info(`Fetching post with id ${postId}...`)
-    const post = await axios
-      .get<PostType>(`https://jsonplaceholder.typicode.com/posts/${postId}`)
-      .then((r) => r.data)
-      .catch((err) => {
-        console.error(err)
-        if (err.status === 404) {
-          throw notFound()
+    
+    try {
+      const response = await fetch(`https://jsonplaceholder.typicode.com/posts/${postId}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw notFound();
         }
-        throw err
-      })
-
-    return post
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const post: PostType = await response.json();
+      return post;
+    } catch (err: unknown) {
+      console.error(err);
+      throw err;
+    }
   })
 
 export const fetchPosts = createServerFn({ method: 'GET' }).handler(
   async () => {
     console.info('Fetching posts...')
-    await new Promise((r) => setTimeout(r, 1000))
-    return axios
-      .get<Array<PostType>>('https://jsonplaceholder.typicode.com/posts')
-      .then((r) => r.data.slice(0, 10))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    const data: Array<PostType> = await response.json();
+    return data.slice(0, 10);
   },
 )
