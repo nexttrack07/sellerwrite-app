@@ -99,7 +99,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
 
   return (
-    <html className="dark">
+    <html>
       <head>
         <HeadContent />
       </head>
