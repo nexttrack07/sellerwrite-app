@@ -16,7 +16,8 @@ import { Route as LogoutImport } from './routes/logout'
 import { Route as LoginImport } from './routes/login'
 import { Route as ProtectedImport } from './routes/_protected'
 import { Route as IndexImport } from './routes/index'
-import { Route as ProtectedListingsImport } from './routes/_protected/listings'
+import { Route as ProtectedListingsIndexImport } from './routes/_protected/listings/index'
+import { Route as ProtectedListingsCreateImport } from './routes/_protected/listings/create'
 
 // Create/Update Routes
 
@@ -49,9 +50,15 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const ProtectedListingsRoute = ProtectedListingsImport.update({
-  id: '/listings',
-  path: '/listings',
+const ProtectedListingsIndexRoute = ProtectedListingsIndexImport.update({
+  id: '/listings/',
+  path: '/listings/',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+
+const ProtectedListingsCreateRoute = ProtectedListingsCreateImport.update({
+  id: '/listings/create',
+  path: '/listings/create',
   getParentRoute: () => ProtectedRoute,
 } as any)
 
@@ -94,11 +101,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupImport
       parentRoute: typeof rootRoute
     }
-    '/_protected/listings': {
-      id: '/_protected/listings'
+    '/_protected/listings/create': {
+      id: '/_protected/listings/create'
+      path: '/listings/create'
+      fullPath: '/listings/create'
+      preLoaderRoute: typeof ProtectedListingsCreateImport
+      parentRoute: typeof ProtectedImport
+    }
+    '/_protected/listings/': {
+      id: '/_protected/listings/'
       path: '/listings'
       fullPath: '/listings'
-      preLoaderRoute: typeof ProtectedListingsImport
+      preLoaderRoute: typeof ProtectedListingsIndexImport
       parentRoute: typeof ProtectedImport
     }
   }
@@ -107,11 +121,13 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface ProtectedRouteChildren {
-  ProtectedListingsRoute: typeof ProtectedListingsRoute
+  ProtectedListingsCreateRoute: typeof ProtectedListingsCreateRoute
+  ProtectedListingsIndexRoute: typeof ProtectedListingsIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
-  ProtectedListingsRoute: ProtectedListingsRoute,
+  ProtectedListingsCreateRoute: ProtectedListingsCreateRoute,
+  ProtectedListingsIndexRoute: ProtectedListingsIndexRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
@@ -124,7 +140,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
-  '/listings': typeof ProtectedListingsRoute
+  '/listings/create': typeof ProtectedListingsCreateRoute
+  '/listings': typeof ProtectedListingsIndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -133,7 +150,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
-  '/listings': typeof ProtectedListingsRoute
+  '/listings/create': typeof ProtectedListingsCreateRoute
+  '/listings': typeof ProtectedListingsIndexRoute
 }
 
 export interface FileRoutesById {
@@ -143,14 +161,29 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
-  '/_protected/listings': typeof ProtectedListingsRoute
+  '/_protected/listings/create': typeof ProtectedListingsCreateRoute
+  '/_protected/listings/': typeof ProtectedListingsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '' | '/login' | '/logout' | '/signup' | '/listings'
+  fullPaths:
+    | '/'
+    | ''
+    | '/login'
+    | '/logout'
+    | '/signup'
+    | '/listings/create'
+    | '/listings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '' | '/login' | '/logout' | '/signup' | '/listings'
+  to:
+    | '/'
+    | ''
+    | '/login'
+    | '/logout'
+    | '/signup'
+    | '/listings/create'
+    | '/listings'
   id:
     | '__root__'
     | '/'
@@ -158,7 +191,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
-    | '/_protected/listings'
+    | '/_protected/listings/create'
+    | '/_protected/listings/'
   fileRoutesById: FileRoutesById
 }
 
@@ -201,7 +235,8 @@ export const routeTree = rootRoute
     "/_protected": {
       "filePath": "_protected.tsx",
       "children": [
-        "/_protected/listings"
+        "/_protected/listings/create",
+        "/_protected/listings/"
       ]
     },
     "/login": {
@@ -213,8 +248,12 @@ export const routeTree = rootRoute
     "/signup": {
       "filePath": "signup.tsx"
     },
-    "/_protected/listings": {
-      "filePath": "_protected/listings.tsx",
+    "/_protected/listings/create": {
+      "filePath": "_protected/listings/create.tsx",
+      "parent": "/_protected"
+    },
+    "/_protected/listings/": {
+      "filePath": "_protected/listings/index.tsx",
       "parent": "/_protected"
     }
   }

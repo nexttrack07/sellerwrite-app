@@ -22,7 +22,12 @@ const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
     return null
   }
 
-  return data.user
+  return {
+    id: data.user.id,
+    email: data.user.email,
+    app_metadata: data.user.app_metadata,
+    user_metadata: data.user.user_metadata,
+  }
 })
 
 export const Route = createRootRoute({
@@ -109,14 +114,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Home
           </Link>{' '}
-          <Link
-            to="/posts"
-            activeProps={{
-              className: 'font-bold',
-            }}
-          >
-            Posts
-          </Link>
           <Link
             to="/listings"
             activeProps={{

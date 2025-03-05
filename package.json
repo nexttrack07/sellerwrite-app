@@ -16,11 +16,17 @@
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
+    "@tailwindcss/vite": "^4.0.9",
     "@tanstack/react-router": "^1.112.11",
     "@tanstack/react-start": "^1.112.11",
     "@tanstack/router-devtools": "^1.112.11",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.477.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss-animate": "^1.0.7",
     "vinxi": "0.5.3",
     "zod": "^3.24.2"
   },
@@ -30,7 +36,7 @@
     "autoprefixer": "^10.4.20",
     "dotenv-cli": "^8.0.0",
     "postcss": "^8.5.1",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.0.9",
     "typescript": "^5.7.2",
     "vite-tsconfig-paths": "^5.1.4"
   }

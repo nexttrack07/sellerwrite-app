@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getSupabaseServerClient } from '~/utils/supabase'
 import { ProductListing, productListingSchema } from '~/types/schemas'
 import { z } from 'zod'
-import { CreateListing } from '~/components/CreateListing'
+import { Link } from '@tanstack/react-router'
 
 export const fetchListings = createServerFn({ 
   method: 'GET' 
@@ -26,19 +26,24 @@ export const fetchListings = createServerFn({
   );
 })
 
-export const Route = createFileRoute('/_protected/listings')({
+export const Route = createFileRoute('/_protected/listings/')({
   loader: () => fetchListings(),
-  component: RouteComponent,
+  component: ListingsComponent,
 })
 
-function RouteComponent() {
+function ListingsComponent() {
   const listings = Route.useLoaderData()
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Listings</h1>
-        <CreateListing />
+        <Link
+          to="/listings/create"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Create Listing
+        </Link>
       </div>
       
       {listings?.length === 0 ? (
@@ -66,4 +71,4 @@ function RouteComponent() {
       )}
     </div>
   )
-}
+} 
