@@ -21,7 +21,8 @@
     "@tanstack/router-devtools": "^1.112.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "vinxi": "0.5.3"
+    "vinxi": "0.5.3",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",

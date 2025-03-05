@@ -1,9 +1,27 @@
 import { useRouter } from '@tanstack/react-router'
-import { useServerFn } from '@tanstack/react-start'
+import { createServerFn, useServerFn } from '@tanstack/react-start'
 import { useMutation } from '../hooks/useMutation'
-import { loginFn } from '../routes/_authed'
 import { signupFn } from '../routes/signup'
 import { Auth } from './Auth'
+import { getSupabaseServerClient } from '~/utils/supabase'
+
+
+export const loginFn = createServerFn()
+  .validator((d: unknown) => d as { email: string; password: string })
+  .handler(async ({ data }) => {
+    const supabase = await getSupabaseServerClient()
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    })
+
+    if (error) {
+      return {
+        error: true,
+        message: error.message,
+      }
+    }
+  })
 
 export function Login() {
   const router = useRouter()
