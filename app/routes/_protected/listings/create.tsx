@@ -149,62 +149,157 @@ function CreateListingPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     
     try {
-      // Client-side validation before sending to server
+      // Validate the form data before submitting
       createCombinedSchema.parse(formData);
-      createListingMutation.mutate({
-        data: formData
-      });
+      
+      // Call the mutation to create the listing
+      createListingMutation.mutate({ data: formData });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        setError(err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
+        // Format and display validation errors
+        const errorMessages = err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+        setError(errorMessages);
       } else {
-        setError('An unknown error occurred');
+        setError('An unexpected error occurred.');
       }
     }
   };
-
-  // Check for server errors
-  if (createListingMutation.error) {
-    setError(createListingMutation.error.message);
-  }
-
+  
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl">Create New Listing</CardTitle>
-            <Button variant="outline" onClick={() => navigate({ to: '/listings' })}>
-              <ArrowLeftIcon className="mr-2 h-4 w-4" />
-              Back to Listings
-            </Button>
-          </div>
-        </CardHeader>
+    <div className="p-6 flex gap-8">
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-2xl">ASINs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label htmlFor="asins">Add ASINs</Label>
+              <div className="flex mt-1">
+                <Input
+                  id="asins"
+                  value={asinsInput}
+                  onChange={(e) => setAsinsInput(e.target.value)}
+                  placeholder="Enter ASIN"
+                  className="flex-grow"
+                />
+                <Button 
+                  type="button" 
+                  onClick={handleAsinsAdd}
+                  className="ml-2"
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              {formData.asins.map((asin, index) => (
+                <Badge key={index} variant="secondary" className="group">
+                  {asin}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        asins: formData.asins.filter((_, i) => i !== index)
+                      });
+                    }}
+                  >
+                    <XIcon className="h-3 w-3" />
+                    <span className="sr-only">Remove</span>
+                  </Button>
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
         
-        {error && (
-          <div className="mx-6 mb-4 bg-destructive/10 text-destructive p-3 rounded border border-destructive">
-            {error}
-          </div>
-        )}
-        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-2xl">Keywords</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label htmlFor="keywords">Add Keywords</Label>
+              <div className="flex mt-1">
+                <Input
+                  id="keywords"
+                  value={keywordsInput}
+                  onChange={(e) => setKeywordsInput(e.target.value)}
+                  placeholder="Enter keyword"
+                  className="flex-grow"
+                />
+                <Button 
+                  type="button" 
+                  onClick={handleKeywordsAdd}
+                  className="ml-2"
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              {formData.keywords.map((keyword, index) => (
+                <Badge key={index} variant="outline" className="group">
+                  {keyword}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 ml-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        keywords: formData.keywords.filter((_, i) => i !== index)
+                      });
+                    }}
+                  >
+                    <XIcon className="h-3 w-3" />
+                    <span className="sr-only">Remove</span>
+                  </Button>
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card className="flex-1">
         <form onSubmit={handleSubmit}>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-2xl">Create New Listing</CardTitle>
+              <Button 
+                type="button" 
+                variant="ghost"
+                onClick={() => navigate({ to: '/listings' })}
+              >
+                <ArrowLeftIcon className="mr-2 h-4 w-4" />
+                Back to Listings
+              </Button>
+            </div>
+            {error && <div className="text-destructive text-sm mt-2">{error}</div>}
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <h3 className="text-lg font-semibold mb-2 border-b pb-1">Listing Details</h3>
               </div>
               
-              <div className="space-y-2">
+              <div className="col-span-1">
                 <Label htmlFor="marketplace">Marketplace</Label>
                 <Input
                   id="marketplace"
                   name="marketplace"
                   value={formData.marketplace}
                   onChange={handleInputChange}
-                  placeholder="e.g. Amazon US"
+                  placeholder="e.g., Amazon, eBay, etc."
+                  className="mt-1"
                   required
                 />
               </div>
@@ -228,13 +323,14 @@ function CreateListingPage() {
                 </select>
               </div>
               
-              <div className="md:col-span-2">
-                <Label>Tone (1-10)</Label>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium">Formal</span>
+              <div className="col-span-1">
+                <Label htmlFor="tone">Tone (1-10)</Label>
+                <div className="flex items-center mt-1">
+                  <span className="text-sm font-medium mr-2">Formal</span>
                   <Input
-                    type="range"
+                    id="tone"
                     name="tone"
+                    type="range"
                     min="1"
                     max="10"
                     value={formData.tone}
@@ -243,90 +339,6 @@ function CreateListingPage() {
                   />
                   <span className="text-sm font-medium">Casual</span>
                   <span className="ml-2 text-muted-foreground">{formData.tone}/10</span>
-                </div>
-              </div>
-              
-              <div className="md:col-span-2">
-                <Label htmlFor="asins">ASINs</Label>
-                <div className="flex mt-1">
-                  <Input
-                    id="asins"
-                    value={asinsInput}
-                    onChange={(e) => setAsinsInput(e.target.value)}
-                    placeholder="Enter ASIN and press Add"
-                    className="flex-grow"
-                  />
-                  <Button 
-                    type="button" 
-                    onClick={handleAsinsAdd}
-                    className="ml-2"
-                  >
-                    Add
-                  </Button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.asins.map((asin, index) => (
-                    <Badge key={index} variant="secondary" className="group">
-                      {asin}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 ml-1 text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            asins: formData.asins.filter((_, i) => i !== index)
-                          });
-                        }}
-                      >
-                        <XIcon className="h-3 w-3" />
-                        <span className="sr-only">Remove</span>
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="md:col-span-2">
-                <Label htmlFor="keywords">Keywords</Label>
-                <div className="flex mt-1">
-                  <Input
-                    id="keywords"
-                    value={keywordsInput}
-                    onChange={(e) => setKeywordsInput(e.target.value)}
-                    placeholder="Enter keyword and press Add"
-                    className="flex-grow"
-                  />
-                  <Button 
-                    type="button" 
-                    onClick={handleKeywordsAdd}
-                    className="ml-2"
-                  >
-                    Add
-                  </Button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.keywords.map((keyword, index) => (
-                    <Badge key={index} variant="outline" className="group">
-                      {keyword}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 ml-1 text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            keywords: formData.keywords.filter((_, i) => i !== index)
-                          });
-                        }}
-                      >
-                        <XIcon className="h-3 w-3" />
-                        <span className="sr-only">Remove</span>
-                      </Button>
-                    </Badge>
-                  ))}
                 </div>
               </div>
               

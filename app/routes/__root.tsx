@@ -13,6 +13,16 @@ import { NotFound } from '../components/NotFound'
 import appCss from '../styles/app.css?url'
 import { seo } from '../utils/seo'
 import { getSupabaseServerClient } from '../utils/supabase'
+import { Logo } from '~/components/Logo'
+import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '~/components/ui/dropdown-menu'
+import { Button } from '~/components/ui/button'
+import { LogOutIcon, UserIcon } from 'lucide-react'
 
 const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = await getSupabaseServerClient()
@@ -104,7 +114,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div className="p-2 flex gap-2 text-lg">
+        <div className="p-2 px-6 flex gap-4 text-sm items-center">
           <Link
             to="/"
             activeProps={{
@@ -112,24 +122,51 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             }}
             activeOptions={{ exact: true }}
           >
-            Home
+            <Logo size="sm" />
           </Link>{' '}
           <Link
             to="/listings"
             activeProps={{
-              className: 'font-bold',
+              className: 'font-bold underline underline-offset-8',
             }}
+            className="p-2 hover:bg-gray-800/10 rounded-xs"
           >
             Listings
           </Link>
           <div className="ml-auto">
             {user ? (
-              <>
-                <span className="mr-2">{user.email}</span>
-                <Link to="/logout">Logout</Link>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email} />
+                      <AvatarFallback>
+                        {user.email?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user.email}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuItem asChild>
+                    <Link to="/logout" className="flex w-full items-center cursor-pointer">
+                      <LogOutIcon className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <Link to="/login">Login</Link>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/login" className="flex items-center">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Login
+                </Link>
+              </Button>
             )}
           </div>
         </div>
