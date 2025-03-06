@@ -6,12 +6,10 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useMutation } from '~/hooks/useMutation'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '~/components/ui/card'
-import { Label } from '~/components/ui/label'
-import { Badge } from '~/components/ui/badge'
-import { Textarea } from '~/components/ui/textarea'
-import { XIcon, ArrowLeftIcon } from 'lucide-react'
+import { Card, CardContent, CardFooter } from '~/components/ui/card'
+import { Asins } from '~/components/Asins'
+import { Keywords } from '~/components/Keywords'
+import { ListingDetails } from '~/components/ListingDetails'
 
 // Combined schema for both product listing and listing version
 const createCombinedSchema = z.object({
@@ -85,7 +83,7 @@ export const Route = createFileRoute('/_protected/listings/create')({
 
 function CreateListingPage() {
   const [formData, setFormData] = useState<CreateCombinedInput>({
-    marketplace: '',
+    marketplace: 'USA',
     asins: [],
     keywords: [],
     style: 'professional',
@@ -95,17 +93,12 @@ function CreateListingPage() {
     bullet_points: ['', '', '', '', ''], // Initialize with 5 empty strings
   })
 
-  // Inputs for array fields
-  const [asinsInput, setAsinsInput] = useState('')
-  const [keywordsInput, setKeywordsInput] = useState('')
-
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const createListingMutation = useMutation({
     fn: useServerFn(createListing),
     onSuccess: () => {
-      // Navigate back to listings page after successful creation
       navigate({ to: '/listings' })
     },
   })
@@ -128,25 +121,32 @@ function CreateListingPage() {
     })
   }
 
-  // Handlers for array fields
-  const handleAsinsAdd = () => {
-    if (asinsInput.trim()) {
-      setFormData({
-        ...formData,
-        asins: [...formData.asins, asinsInput.trim()],
-      })
-      setAsinsInput('')
-    }
+  const handleAddAsin = (asin: string) => {
+    setFormData({
+      ...formData,
+      asins: [...formData.asins, asin],
+    })
   }
 
-  const handleKeywordsAdd = () => {
-    if (keywordsInput.trim()) {
-      setFormData({
-        ...formData,
-        keywords: [...formData.keywords, keywordsInput.trim()],
-      })
-      setKeywordsInput('')
-    }
+  const handleRemoveAsin = (index: number) => {
+    setFormData({
+      ...formData,
+      asins: formData.asins.filter((_, i) => i !== index),
+    })
+  }
+
+  const handleAddKeyword = (keyword: string) => {
+    setFormData({
+      ...formData,
+      keywords: [...formData.keywords, keyword],
+    })
+  }
+
+  const handleRemoveKeyword = (index: number) => {
+    setFormData({
+      ...formData,
+      keywords: formData.keywords.filter((_, i) => i !== index),
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -164,169 +164,30 @@ function CreateListingPage() {
         const errorMessages = err.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
         setError(errorMessages)
       } else {
-        setError('An unexpected error occurred.')
+        setError('An unexpected error occurred')
       }
     }
   }
 
   return (
-    <div className="p-6 flex flex-wrap gap-8">
-      <div className="w-full flex">
-        <Card>
-          <CardContent>
-            <div>
-              <Label htmlFor="asins" className="text-lg font-semibold mb-2">
-                Add ASINs
-              </Label>
-              <div className="flex mt-1">
-                <Input
-                  id="asins"
-                  value={asinsInput}
-                  onChange={(e) => setAsinsInput(e.target.value)}
-                  placeholder="Enter ASIN"
-                  className="flex-grow"
-                />
-                <Button type="button" onClick={handleAsinsAdd} className="ml-2">
-                  Add
-                </Button>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-col gap-2">
-              {formData.asins.map((asin, index) => (
-                <Badge key={index} variant="default" className="group p-2 px-3">
-                  {asin}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 ml-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        asins: formData.asins.filter((_, i) => i !== index),
-                      })
-                    }}
-                  >
-                    <XIcon className="h-3 w-3" />
-                    <span className="sr-only">Remove</span>
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        <div className="flex-1" />
+    <div className="container mx-auto p-4 flex flex-wrap flex-col md:flex-row gap-4">
+      <div className="flex w-full">
+        <Asins asins={formData.asins} onAddAsin={handleAddAsin} onRemoveAsin={handleRemoveAsin} />
       </div>
-      <div className="space-y-4">
-        <Card>
-          <CardContent>
-            <div>
-              <Label htmlFor="keywords" className="text-lg font-semibold mb-2">
-                Add Keywords
-              </Label>
-              <div className="flex mt-1">
-                <Input
-                  id="keywords"
-                  value={keywordsInput}
-                  onChange={(e) => setKeywordsInput(e.target.value)}
-                  placeholder="Enter keyword"
-                  className="flex-grow"
-                />
-                <Button type="button" onClick={handleKeywordsAdd} className="ml-2">
-                  Add
-                </Button>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-col gap-2">
-              {formData.keywords.map((keyword, index) => (
-                <Badge key={index} variant="outline" className="group">
-                  {keyword}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 ml-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        keywords: formData.keywords.filter((_, i) => i !== index),
-                      })
-                    }}
-                  >
-                    <XIcon className="h-3 w-3" />
-                    <span className="sr-only">Remove</span>
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Keywords keywords={formData.keywords} onAddKeyword={handleAddKeyword} onRemoveKeyword={handleRemoveKeyword} />
 
       <Card className="flex-1">
         <form onSubmit={handleSubmit}>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <h3 className="text-lg font-semibold mb-2 border-b pb-1">Listing Details</h3>
-              </div>
-
-              <div className="col-span-1">
-                <Label htmlFor="marketplace">Marketplace</Label>
-                <Input
-                  id="marketplace"
-                  name="marketplace"
-                  value="USA"
-                  placeholder="e.g., Amazon, eBay, etc."
-                  className="mt-1"
-                  disabled
-                  required
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="mt-1"
-                  required
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="bullet_points">Bullet Points</Label>
-                <div className="space-y-2 mt-2">
-                  {[0, 1, 2, 3, 4].map((index) => (
-                    <div key={index} className="flex items-center">
-                      <span className="mr-2 text-muted-foreground">•</span>
-                      <Input
-                        id={`bullet_point_${index}`}
-                        value={formData.bullet_points[index] || ''}
-                        onChange={(e) => handleBulletPointChange(index, e.target.value)}
-                        placeholder={`Bullet point ${index + 1}`}
-                        className="flex-grow"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="mt-1"
-                  required
-                />
-              </div>
-            </div>
+            <ListingDetails
+              title={formData.title}
+              bulletPoints={formData.bullet_points}
+              description={formData.description}
+              marketplace={formData.marketplace}
+              onTitleChange={handleInputChange}
+              onBulletPointChange={handleBulletPointChange}
+              onDescriptionChange={handleInputChange}
+            />
           </CardContent>
 
           <CardFooter className="flex justify-end space-x-4 pt-6">
