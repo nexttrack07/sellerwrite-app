@@ -271,20 +271,6 @@ function CreateListingPage() {
       
       <Card className="flex-1">
         <form onSubmit={handleSubmit}>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-2xl">Create New Listing</CardTitle>
-              <Button 
-                type="button" 
-                variant="ghost"
-                onClick={() => navigate({ to: '/listings' })}
-              >
-                <ArrowLeftIcon className="mr-2 h-4 w-4" />
-                Back to Listings
-              </Button>
-            </div>
-            {error && <div className="text-destructive text-sm mt-2">{error}</div>}
-          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
@@ -296,54 +282,12 @@ function CreateListingPage() {
                 <Input
                   id="marketplace"
                   name="marketplace"
-                  value={formData.marketplace}
-                  onChange={handleInputChange}
+                  value="USA"
                   placeholder="e.g., Amazon, eBay, etc."
                   className="mt-1"
+                  disabled
                   required
                 />
-              </div>
-              
-              <div className="col-span-1">
-                <Label htmlFor="style">Style</Label>
-                <select 
-                  id="style"
-                  name="style"
-                  value={formData.style}
-                  onChange={handleInputChange}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="professional">Professional</option>
-                  <option value="casual">Casual</option>
-                  <option value="technical">Technical</option>
-                  <option value="friendly">Friendly</option>
-                  <option value="enthusiastic">Enthusiastic</option>
-                  <option value="formal">Formal</option>
-                  <option value="informative">Informative</option>
-                </select>
-              </div>
-              
-              <div className="col-span-1">
-                <Label htmlFor="tone">Tone (1-10)</Label>
-                <div className="flex items-center mt-1">
-                  <span className="text-sm font-medium mr-2">Formal</span>
-                  <Input
-                    id="tone"
-                    name="tone"
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={formData.tone}
-                    onChange={handleInputChange}
-                    className="flex-grow"
-                  />
-                  <span className="text-sm font-medium">Casual</span>
-                  <span className="ml-2 text-muted-foreground">{formData.tone}/10</span>
-                </div>
-              </div>
-              
-              <div className="md:col-span-2 mt-4">
-                <h3 className="text-lg font-semibold mb-2 border-b pb-1">Content Details</h3>
               </div>
               
               <div className="md:col-span-2">
@@ -357,21 +301,8 @@ function CreateListingPage() {
                   required
                 />
               </div>
-              
-              <div className="md:col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="mt-1"
-                  required
-                />
-              </div>
-              
-              <div className="md:col-span-2">
+
+                            <div className="md:col-span-2">
                 <Label htmlFor="bullet_points">Bullet Points</Label>
                 <div className="flex mt-1">
                   <Input
@@ -416,6 +347,20 @@ function CreateListingPage() {
                   <p className="text-sm text-muted-foreground mt-1">Add at least one bullet point</p>
                 )}
               </div>
+              
+              <div className="md:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="mt-1"
+                  required
+                />
+              </div>
+              
             </div>
           </CardContent>
           
