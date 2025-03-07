@@ -16,6 +16,7 @@ import { Route as LogoutImport } from './routes/logout'
 import { Route as LoginImport } from './routes/login'
 import { Route as ProtectedImport } from './routes/_protected'
 import { Route as IndexImport } from './routes/index'
+import { Route as ProtectedAnalyzeImport } from './routes/_protected/analyze'
 import { Route as ProtectedListingsIndexImport } from './routes/_protected/listings/index'
 import { Route as ProtectedListingsCreateImport } from './routes/_protected/listings/create'
 
@@ -48,6 +49,12 @@ const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const ProtectedAnalyzeRoute = ProtectedAnalyzeImport.update({
+  id: '/analyze',
+  path: '/analyze',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 
 const ProtectedListingsIndexRoute = ProtectedListingsIndexImport.update({
@@ -101,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupImport
       parentRoute: typeof rootRoute
     }
+    '/_protected/analyze': {
+      id: '/_protected/analyze'
+      path: '/analyze'
+      fullPath: '/analyze'
+      preLoaderRoute: typeof ProtectedAnalyzeImport
+      parentRoute: typeof ProtectedImport
+    }
     '/_protected/listings/create': {
       id: '/_protected/listings/create'
       path: '/listings/create'
@@ -121,11 +135,13 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface ProtectedRouteChildren {
+  ProtectedAnalyzeRoute: typeof ProtectedAnalyzeRoute
   ProtectedListingsCreateRoute: typeof ProtectedListingsCreateRoute
   ProtectedListingsIndexRoute: typeof ProtectedListingsIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedAnalyzeRoute: ProtectedAnalyzeRoute,
   ProtectedListingsCreateRoute: ProtectedListingsCreateRoute,
   ProtectedListingsIndexRoute: ProtectedListingsIndexRoute,
 }
@@ -140,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/analyze': typeof ProtectedAnalyzeRoute
   '/listings/create': typeof ProtectedListingsCreateRoute
   '/listings': typeof ProtectedListingsIndexRoute
 }
@@ -150,6 +167,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/analyze': typeof ProtectedAnalyzeRoute
   '/listings/create': typeof ProtectedListingsCreateRoute
   '/listings': typeof ProtectedListingsIndexRoute
 }
@@ -161,6 +179,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
+  '/_protected/analyze': typeof ProtectedAnalyzeRoute
   '/_protected/listings/create': typeof ProtectedListingsCreateRoute
   '/_protected/listings/': typeof ProtectedListingsIndexRoute
 }
@@ -173,6 +192,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/analyze'
     | '/listings/create'
     | '/listings'
   fileRoutesByTo: FileRoutesByTo
@@ -182,6 +202,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/analyze'
     | '/listings/create'
     | '/listings'
   id:
@@ -191,6 +212,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/signup'
+    | '/_protected/analyze'
     | '/_protected/listings/create'
     | '/_protected/listings/'
   fileRoutesById: FileRoutesById
@@ -235,6 +257,7 @@ export const routeTree = rootRoute
     "/_protected": {
       "filePath": "_protected.tsx",
       "children": [
+        "/_protected/analyze",
         "/_protected/listings/create",
         "/_protected/listings/"
       ]
@@ -247,6 +270,10 @@ export const routeTree = rootRoute
     },
     "/signup": {
       "filePath": "signup.tsx"
+    },
+    "/_protected/analyze": {
+      "filePath": "_protected/analyze.tsx",
+      "parent": "/_protected"
     },
     "/_protected/listings/create": {
       "filePath": "_protected/listings/create.tsx",

@@ -97,7 +97,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
 
   return (
-    <html>
+    <html className="dark">
       <head>
         <HeadContent />
       </head>
@@ -117,9 +117,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             activeProps={{
               className: 'font-bold underline underline-offset-8',
             }}
-            className="p-2 hover:bg-gray-800/10 rounded-xs"
+            className="p-2 hover:underline underline-offset-8"
           >
             Listings
+          </Link>
+          <Link
+            to="/analyze"
+            activeProps={{
+              className: 'font-bold underline underline-offset-8',
+            }}
+            className="p-2 hover:underline underline-offset-8"
+          >
+            Analyze
           </Link>
           <div className="ml-auto">
             {user ? (
@@ -159,6 +168,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <hr />
         {children}
         <TanStackRouterDevtools position="bottom-right" />
+        <Scripts />
       </body>
     </html>
   )
