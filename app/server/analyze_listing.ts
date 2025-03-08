@@ -1,6 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import type { ListingAnalysis } from '~/types/analytics'
+import { Anthropic } from '@anthropic-ai/sdk'
+
+// Anthropic client initialization
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+})
 
 // Function to fetch Amazon product data from Canopy API
 async function fetchAmazonProductData(asin: string) {
@@ -9,26 +15,14 @@ async function fetchAmazonProductData(asin: string) {
       amazonProduct(input: {asin: "${asin}"}) {
         title
         mainImageUrl
-        rating
-        price {
-          display
-        }
-        bulletPoints
-        description
+        optimizedDescription
         featureBullets
-        images {
-          hiRes
-        }
-        categories {
-          name
-        }
-        attributes {
-          name
-          value
-        }
       }
     }
   `
+
+  console.log('CANOPY_API_KEY', process.env.CANOPY_API_KEY)
+  console.log('ANTHROPIC_API_KEY', process.env.ANTHROPIC_API_KEY)
 
   const response = await fetch('https://graphql.canopyapi.co/', {
     method: 'POST',
@@ -53,7 +47,8 @@ async function fetchAmazonProductData(asin: string) {
   return data.data.amazonProduct
 }
 
-export const analyzeListing = createServerFn()
+// Separate function to fetch just the product data
+export const fetchProductData = createServerFn()
   .validator((d: unknown) =>
     z
       .object({
@@ -63,8 +58,34 @@ export const analyzeListing = createServerFn()
   )
   .handler(async ({ data: { asin } }) => {
     try {
-      // Fetch product data from Canopy API
-      const listingData = await fetchAmazonProductData(asin)
+      const productData = await fetchAmazonProductData(asin)
+      return {
+        success: true,
+        productData,
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        error: true,
+        message: error.message || 'Failed to fetch product data',
+      }
+    }
+  })
+
+// Main analysis function
+export const analyzeListing = createServerFn()
+  .validator((d: unknown) =>
+    z
+      .object({
+        asin: z.string(),
+        productData: z.any().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data: { asin, productData } }) => {
+    try {
+      // If product data wasn't provided, fetch it
+      const listingData = productData || (await fetchAmazonProductData(asin))
 
       // Prepare the prompt with explicit format instructions
       const prompt = `
@@ -114,33 +135,23 @@ export const analyzeListing = createServerFn()
         Listing data: ${JSON.stringify(listingData)}
       `
 
-      // Call Claude API
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.CLAUDE_API_KEY as string,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 4000,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          response_format: { type: 'json_object' },
-        }),
+      // Call Claude API using the SDK with the specified model
+      const message = await anthropic.messages.create({
+        model: 'claude-3-7-sonnet-20250219',
+        max_tokens: 4000,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
       })
 
-      if (!response.ok) {
-        throw new Error(`Claude API error: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      const analysisResult = JSON.parse(data.content[0].text) as ListingAnalysis
+      // Update the parsing logic to handle JSON wrapped in markdown code block
+      // Parse the response content using the correct property
+      const jsonText = (message.content[0] as any).text
+      const cleanedJson = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '')
+      const analysisResult = JSON.parse(cleanedJson) as ListingAnalysis
 
       // Validate the response structure
       validateAnalysisStructure(analysisResult)
@@ -152,6 +163,7 @@ export const analyzeListing = createServerFn()
         analysis: analysisResult,
       }
     } catch (error: any) {
+      console.error('API Error:', error)
       return {
         success: false,
         error: true,

@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { Button } from '~/components/ui/button'
 import { LogOutIcon, UserIcon } from 'lucide-react'
+import { Toaster } from '~/components/ui/sonner'
 
 const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
   const supabase = await getSupabaseServerClient()
@@ -89,6 +90,7 @@ function RootComponent() {
   return (
     <RootDocument>
       <Outlet />
+      <Toaster />
     </RootDocument>
   )
 }
