@@ -8,9 +8,7 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
   const [variables, setVariables] = React.useState<TVariables | undefined>()
   const [error, setError] = React.useState<TError | undefined>()
   const [data, setData] = React.useState<TData | undefined>()
-  const [status, setStatus] = React.useState<
-    'idle' | 'pending' | 'success' | 'error'
-  >('idle')
+  const [status, setStatus] = React.useState<'idle' | 'pending' | 'success' | 'error'>('idle')
 
   const mutate = React.useCallback(
     async (variables: TVariables): Promise<TData | undefined> => {
@@ -33,6 +31,15 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
     [opts.fn],
   )
 
+  // Add reset method to clear all state
+  const reset = React.useCallback(() => {
+    setStatus('idle')
+    setSubmittedAt(undefined)
+    setVariables(undefined)
+    setError(undefined)
+    setData(undefined)
+  }, [])
+
   return {
     status,
     variables,
@@ -40,5 +47,6 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
     mutate,
     error,
     data,
+    reset, // Include the reset method in the return value
   }
 }

@@ -13,6 +13,7 @@ import type { ListingAnalysis } from '~/types/analytics'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
 import { useMutation } from '~/hooks/useMutation'
 import { toast } from 'sonner'
+import { X, Search } from 'lucide-react'
 
 export const Route = createFileRoute('/_protected/analyze')({
   component: AnalyzePage,
@@ -32,6 +33,21 @@ function AnalyzePage() {
   const analyzeListingMutation = useMutation({
     fn: useServerFn(analyzeListing),
   })
+
+  // Reset all state and clear analysis
+  const resetAnalysis = () => {
+    setAsin('')
+    setProductData(null)
+    setIsAnalyzing(false)
+
+    // Manually reset mutation states since there's no reset() method
+    // This workaround simulates what a reset() method would do
+    if (fetchProductMutation.status !== 'idle') {
+      // Force re-render to reset the mutation objects by using a new instance
+      // This is a bit hacky but should work until we can add a proper reset method
+      window.location.reload()
+    }
+  }
 
   // Monitor product fetch status changes
   useEffect(() => {
@@ -136,41 +152,79 @@ function AnalyzePage() {
   const analysisResult = analyzeListingMutation.data?.success ? analyzeListingMutation.data.analysis : null
   const analysisInProgress = productData && !analysisResult && analyzeListingMutation.status === 'pending'
 
+  // Determine image source
+  const productImage = productData?.mainImageUrl || (analyzeListingMutation.data?.listingData?.mainImageUrl as string)
+  const productTitle = productData?.title || (analyzeListingMutation.data?.listingData?.title as string)
+
   return (
     <div className="container py-10 mx-auto">
-      {/* Search Form */}
+      {/* Conditional Rendering: Search Form or Product Image Card */}
       <div className="mb-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>Analyze an Amazon Listing</CardTitle>
-            <CardDescription>Enter a valid 10-character Amazon ASIN below.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Input
-                value={asin}
-                onChange={(e) => setAsin(e.target.value.trim())}
-                placeholder="Example: B01DFKC2SO"
-                className="max-w-md"
-              />
-              <Button
-                onClick={handleAnalyze}
-                disabled={
-                  fetchProductMutation.status === 'pending' ||
-                  analyzeListingMutation.status === 'pending' ||
-                  !asin.trim() ||
-                  asin.length !== 10
-                }
-              >
-                {fetchProductMutation.status === 'pending'
-                  ? 'Fetching...'
-                  : analyzeListingMutation.status === 'pending'
-                    ? 'Analyzing...'
-                    : 'Analyze'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {!productData ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Analyze an Amazon Listing</CardTitle>
+              <CardDescription>Enter a valid 10-character Amazon ASIN below.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  value={asin}
+                  onChange={(e) => setAsin(e.target.value.trim())}
+                  placeholder="Example: B01DFKC2SO"
+                  className="max-w-md"
+                />
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={
+                    fetchProductMutation.status === 'pending' ||
+                    analyzeListingMutation.status === 'pending' ||
+                    !asin.trim() ||
+                    asin.length !== 10
+                  }
+                >
+                  {fetchProductMutation.status === 'pending'
+                    ? 'Fetching...'
+                    : analyzeListingMutation.status === 'pending'
+                      ? 'Analyzing...'
+                      : 'Analyze'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="flex justify-center">
+            <Card className="w-auto max-w-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  {/* Product Thumbnail */}
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <AspectRatio ratio={1}>
+                      <img src={productImage} alt={productTitle} className="rounded-md object-cover w-full h-full" />
+                    </AspectRatio>
+                  </div>
+
+                  {/* Product ASIN & Brief Info */}
+                  <div className="flex-grow min-w-0">
+                    <div className="font-medium text-sm truncate">{productTitle}</div>
+                    <div className="text-xs text-muted-foreground">ASIN: {asin}</div>
+                  </div>
+
+                  {/* Reset Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={resetAnalysis}
+                    className="ml-auto flex-shrink-0"
+                    aria-label="Clear and start over"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Results Section */}
@@ -183,23 +237,8 @@ function AnalyzePage() {
                 <CardTitle>Product Information</CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Product image - smaller size */}
-                <div className="mb-6 mx-auto max-w-[250px]">
-                  <AspectRatio ratio={1}>
-                    <img
-                      src={
-                        productData?.mainImageUrl || (analyzeListingMutation.data?.listingData?.mainImageUrl as string)
-                      }
-                      alt="Product"
-                      className="rounded-md object-cover w-full h-full"
-                    />
-                  </AspectRatio>
-                </div>
-
                 {/* Product title */}
-                <h3 className="text-xl font-semibold mb-4">
-                  {productData?.title || (analyzeListingMutation.data?.listingData?.title as string)}
-                </h3>
+                <h3 className="text-xl font-semibold mb-4">{productTitle}</h3>
 
                 {/* Feature bullets */}
                 <div className="mb-6">
