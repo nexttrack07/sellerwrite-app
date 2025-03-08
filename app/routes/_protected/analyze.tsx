@@ -125,10 +125,10 @@ function AnalyzePage() {
     }
   }
 
-  // Determine badge color based on score
+  // Display helper for scoring badges
   const getScoreBadgeVariant = (score: number) => {
-    if (score >= 8) return 'default'
-    if (score >= 6) return 'secondary'
+    if (score >= 8) return 'success'
+    if (score >= 6) return 'warning'
     return 'destructive'
   }
 
@@ -137,98 +137,131 @@ function AnalyzePage() {
   const analysisInProgress = productData && !analysisResult && analyzeListingMutation.status === 'pending'
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Input Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Amazon Listing Analyzer</CardTitle>
-          <CardDescription>Enter an Amazon ASIN to analyze the listing for optimization opportunities</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <Input
-            type="text"
-            placeholder="ASIN (e.g., B01DFKC2SO)"
-            value={asin}
-            onChange={(e) => setAsin(e.target.value)}
-            className="flex-1"
-            maxLength={10}
-          />
-          <Button
-            onClick={handleAnalyze}
-            disabled={
-              fetchProductMutation.status === 'pending' ||
-              analyzeListingMutation.status === 'pending' ||
-              !asin.trim() ||
-              asin.length !== 10
-            }
-          >
-            {fetchProductMutation.status === 'pending'
-              ? 'Fetching...'
-              : analyzeListingMutation.status === 'pending'
-                ? 'Analyzing...'
-                : 'Analyze'}
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="container py-10 mx-auto">
+      {/* Search Form */}
+      <div className="mb-10">
+        <Card>
+          <CardHeader>
+            <CardTitle>Analyze an Amazon Listing</CardTitle>
+            <CardDescription>Enter a valid 10-character Amazon ASIN below.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={asin}
+                onChange={(e) => setAsin(e.target.value.trim())}
+                placeholder="Example: B01DFKC2SO"
+                className="max-w-md"
+              />
+              <Button
+                onClick={handleAnalyze}
+                disabled={
+                  fetchProductMutation.status === 'pending' ||
+                  analyzeListingMutation.status === 'pending' ||
+                  !asin.trim() ||
+                  asin.length !== 10
+                }
+              >
+                {fetchProductMutation.status === 'pending'
+                  ? 'Fetching...'
+                  : analyzeListingMutation.status === 'pending'
+                    ? 'Analyzing...'
+                    : 'Analyze'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Product Information (shown immediately when available) */}
-      {productData && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Product Info Column */}
-          <div className="md:col-span-4 space-y-6">
+      {/* Results Section */}
+      {(fetchProductMutation.data?.success || analyzeListingMutation.data?.success) && (
+        <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Product Information */}
+          <div className="col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>Product Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="w-full">
+              <CardContent>
+                {/* Product image - smaller size */}
+                <div className="mb-6 mx-auto max-w-[250px]">
                   <AspectRatio ratio={1}>
                     <img
-                      src={productData.mainImageUrl}
-                      alt={productData.title}
+                      src={
+                        productData?.mainImageUrl || (analyzeListingMutation.data?.listingData?.mainImageUrl as string)
+                      }
+                      alt="Product"
                       className="rounded-md object-cover w-full h-full"
                     />
                   </AspectRatio>
                 </div>
-                <h3 className="text-lg font-semibold line-clamp-2">{productData.title}</h3>
+
+                {/* Product title */}
+                <h3 className="text-xl font-semibold mb-4">
+                  {productData?.title || (analyzeListingMutation.data?.listingData?.title as string)}
+                </h3>
+
+                {/* Feature bullets */}
+                <div className="mb-6">
+                  <h4 className="font-semibold text-lg mb-2">Key Features</h4>
+                  <ul className="list-disc pl-5 text-sm space-y-2">
+                    {(
+                      productData?.featureBullets ||
+                      analyzeListingMutation.data?.listingData?.featureBullets ||
+                      []
+                    ).map((bullet: string, index: number) => (
+                      <li key={index}>{bullet}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Product description */}
+                <div>
+                  <h4 className="font-semibold text-lg mb-2">Description</h4>
+                  <p className="text-muted-foreground text-sm">
+                    {productData?.optimizedDescription ||
+                      (analyzeListingMutation.data?.listingData?.optimizedDescription as string)}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Analysis Column - Shows loading state when analysis is in progress */}
-          <div className="md:col-span-8 space-y-6">
-            {analysisInProgress ? (
+          {/* Analysis Results */}
+          <div className="space-y-6">
+            {analyzeListingMutation.status === 'pending' ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Analysis in Progress</CardTitle>
+                  <CardTitle>Analyzing your product...</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <p className="mb-4">Our AI is analyzing your product listing...</p>
-                    <Progress className="w-full mb-4" value={undefined} />
-                    <p className="text-sm text-muted-foreground">This typically takes 15-30 seconds</p>
-                  </div>
+                <CardContent>
+                  <Progress value={40} className="mb-2" />
+                  <p className="text-muted-foreground">
+                    Our AI is analyzing this listing against best practices. This may take a minute.
+                  </p>
                 </CardContent>
               </Card>
-            ) : analysisResult ? (
+            ) : analyzeListingMutation.data?.success && analyzeListingMutation.data.analysis ? (
               <>
-                {/* Overall Score Card */}
+                {/* Overall Score */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Overall Score</CardTitle>
+                    <CardTitle>Overall Listing Score</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">{analysisResult.overall_score.toFixed(1)}/10</span>
-                      <Badge variant={getScoreBadgeVariant(analysisResult.overall_score)}>
-                        {analysisResult.overall_score >= 8
+                  <CardContent>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-2xl font-bold">
+                        {analyzeListingMutation.data.analysis.overall_score.toFixed(1)}/10
+                      </h3>
+                      <Badge variant={getScoreBadgeVariant(analyzeListingMutation.data.analysis.overall_score)}>
+                        {analyzeListingMutation.data.analysis.overall_score >= 8
                           ? 'Excellent'
-                          : analysisResult.overall_score >= 6
+                          : analyzeListingMutation.data.analysis.overall_score >= 6
                             ? 'Good'
                             : 'Needs Improvement'}
                       </Badge>
                     </div>
-                    <Progress value={analysisResult.overall_score * 10} />
+                    <Progress value={analyzeListingMutation.data.analysis.overall_score * 10} />
                   </CardContent>
                 </Card>
 
@@ -239,7 +272,7 @@ function AnalyzePage() {
                   </CardHeader>
                   <CardContent>
                     <Accordion type="single" collapsible>
-                      {Object.entries(analysisResult)
+                      {Object.entries(analyzeListingMutation.data.analysis)
                         .filter(([key]) => key !== 'overall_score')
                         .map(([category, data]) => (
                           <AccordionItem key={category} value={category}>
