@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '~/components/ui/card'
 import { Input } from '~/components/ui/input'
@@ -8,12 +8,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/
 import { Badge } from '~/components/ui/badge'
 import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
 import { useServerFn } from '@tanstack/react-start'
-import { analyzeListing, fetchProductData } from '~/server/analyze_listing'
+import { analyzeListing } from '~/server/analyze_listing'
+import { fetchProductData } from '~/server/fetch_product'
 import type { ListingAnalysis } from '~/types/analytics'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
 import { useMutation } from '~/hooks/useMutation'
 import { toast } from 'sonner'
-import { X, Search } from 'lucide-react'
+import { X, Search, Brain } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/_protected/analyze')({
   component: AnalyzePage,
@@ -23,6 +25,10 @@ function AnalyzePage() {
   const [asin, setAsin] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [productData, setProductData] = useState<any>(null)
+
+  // Add simulated progress state
+  const [simulatedProgress, setSimulatedProgress] = useState(0)
+  const progressInterval = useRef<NodeJS.Timeout | null>(null)
 
   // Product data fetch mutation
   const fetchProductMutation = useMutation({
@@ -39,12 +45,16 @@ function AnalyzePage() {
     setAsin('')
     setProductData(null)
     setIsAnalyzing(false)
+    setSimulatedProgress(0)
+
+    // Clear any running intervals
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current)
+      progressInterval.current = null
+    }
 
     // Manually reset mutation states since there's no reset() method
-    // This workaround simulates what a reset() method would do
     if (fetchProductMutation.status !== 'idle') {
-      // Force re-render to reset the mutation objects by using a new instance
-      // This is a bit hacky but should work until we can add a proper reset method
       window.location.reload()
     }
   }
@@ -86,6 +96,45 @@ function AnalyzePage() {
       console.error(fetchProductMutation.error?.message)
     }
   }, [fetchProductMutation.status, fetchProductMutation.data, fetchProductMutation.error, asin])
+
+  // Simulated progress bar effect
+  useEffect(() => {
+    // Start the simulated progress when analysis begins
+    if (analyzeListingMutation.status === 'pending' && !progressInterval.current) {
+      // Reset progress
+      setSimulatedProgress(10)
+
+      // Set up interval to increment progress
+      progressInterval.current = setInterval(() => {
+        setSimulatedProgress((current) => {
+          // Progress gets slower as we approach "completion"
+          if (current < 30) return current + 2 // Fast at first
+          if (current < 50) return current + 1 // Medium speed
+          if (current < 75) return current + 0.5 // Slower
+          if (current < 90) return current + 0.2 // Very slow
+          return current // Stop at 90%
+        })
+      }, 500)
+    }
+
+    // Clear interval when analysis completes or fails
+    if (analyzeListingMutation.status !== 'pending' && progressInterval.current) {
+      clearInterval(progressInterval.current)
+      progressInterval.current = null
+
+      // Jump to 100% when complete
+      if (analyzeListingMutation.status === 'success') {
+        setSimulatedProgress(100)
+      }
+    }
+
+    // Clean up on unmount
+    return () => {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+    }
+  }, [analyzeListingMutation.status])
 
   // Monitor analysis status changes
   useEffect(() => {
@@ -155,6 +204,14 @@ function AnalyzePage() {
   // Determine image source
   const productImage = productData?.mainImageUrl || (analyzeListingMutation.data?.listingData?.mainImageUrl as string)
   const productTitle = productData?.title || (analyzeListingMutation.data?.listingData?.title as string)
+
+  // Analysis status messages based on progress
+  const getAnalysisStatusMessage = () => {
+    if (simulatedProgress < 30) return 'Examining keywords and title structure...'
+    if (simulatedProgress < 60) return 'Analyzing product bullets and description...'
+    if (simulatedProgress < 85) return 'Evaluating competitor differentiation...'
+    return 'Finalizing analysis and preparing recommendations...'
+  }
 
   return (
     <div className="container py-10 mx-auto">
@@ -271,12 +328,19 @@ function AnalyzePage() {
             {analyzeListingMutation.status === 'pending' ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Analyzing your product...</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Analyzing your product...
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Progress value={40} className="mb-2" />
-                  <p className="text-muted-foreground">
-                    Our AI is analyzing this listing against best practices. This may take a minute.
+                  <Progress value={simulatedProgress} className="mb-3" />
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <Brain className="h-4 w-4 text-primary" />
+                    <p className="text-muted-foreground font-medium">{getAnalysisStatusMessage()}</p>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Our AI is examining your listing against industry best practices. This may take up to a minute.
                   </p>
                 </CardContent>
               </Card>
