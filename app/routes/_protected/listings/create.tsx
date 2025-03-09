@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
 import { styleSchema } from '~/types/schemas'
 import { getSupabaseServerClient } from '~/utils/supabase'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { z } from 'zod'
 import { useMutation } from '~/hooks/useMutation'
 import { Button } from '~/components/ui/button'
@@ -13,8 +13,9 @@ import { ListingDetails } from '~/components/ListingDetails'
 import { Stepper, type StepItem } from '~/components/Stepper'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import { ArrowLeft, ArrowRight, Loader2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, X, Search } from 'lucide-react'
 import { useListingStore } from '~/store/listingStore'
+import { KeywordsList } from '~/components/KeywordsList'
 
 // Combined schema for both product listing and listing version
 const createCombinedSchema = z.object({
@@ -345,6 +346,42 @@ function ASINInputStep() {
 }
 
 function KeywordsStep() {
+  const { keywords, keywordsLoading, asins, addKeyword, removeKeyword, toggleKeywordSelection } = useListingStore()
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [newKeyword, setNewKeyword] = useState('')
+
+  // Filter keywords based on search term
+  const filteredKeywords = useMemo(() => {
+    if (!searchTerm.trim()) return keywords
+
+    return keywords.filter((keyword) => keyword.text.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [keywords, searchTerm])
+
+  // Stats about keywords
+  const stats = useMemo(() => {
+    const total = keywords.length
+    const selected = keywords.filter((k) => k.selected).length
+    const fromAsins = asins.reduce(
+      (acc, asin) => {
+        acc[asin] = keywords.filter((k) => k.sourceAsin === asin).length
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+    const manual = keywords.filter((k) => k.sourceAsin === null).length
+
+    return { total, selected, fromAsins, manual }
+  }, [keywords, asins])
+
+  // Handle adding a new keyword
+  const handleAddKeyword = () => {
+    if (newKeyword.trim()) {
+      addKeyword(newKeyword.trim())
+      setNewKeyword('')
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -354,8 +391,70 @@ function KeywordsStep() {
           listing.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">Keyword management UI would go here</p>
+      <CardContent className="space-y-6">
+        {/* Keyword stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-muted/40 rounded p-3">
+            <p className="text-sm font-medium">Total Keywords</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="bg-muted/40 rounded p-3">
+            <p className="text-sm font-medium">Selected</p>
+            <p className="text-2xl font-bold">{stats.selected}</p>
+          </div>
+          <div className="bg-muted/40 rounded p-3">
+            <p className="text-sm font-medium">From ASINs</p>
+            <p className="text-2xl font-bold">{stats.total - stats.manual}</p>
+          </div>
+          <div className="bg-muted/40 rounded p-3">
+            <p className="text-sm font-medium">Custom Added</p>
+            <p className="text-2xl font-bold">{stats.manual}</p>
+          </div>
+        </div>
+
+        {/* Add new keyword */}
+        <div className="flex space-x-2">
+          <Input
+            placeholder="Add a custom keyword..."
+            value={newKeyword}
+            onChange={(e) => setNewKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
+          />
+          <Button onClick={handleAddKeyword}>Add</Button>
+        </div>
+
+        {/* Search keywords */}
+        <div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search keywords..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Keywords list */}
+        {keywordsLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredKeywords.length > 0 ? (
+          <KeywordsList
+            keywords={filteredKeywords}
+            onToggle={toggleKeywordSelection}
+            onRemove={removeKeyword}
+            asins={asins}
+          />
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            {keywords.length > 0
+              ? 'No keywords match your search'
+              : 'No keywords extracted yet. Add ASINs in the previous step.'}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

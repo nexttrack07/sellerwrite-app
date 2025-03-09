@@ -12,10 +12,10 @@ interface ProductData {
   [key: string]: any // For other product data properties
 }
 
-interface Keyword {
+export interface Keyword {
   id: string
   text: string
-  sourceAsin: string | null // null means manually added
+  sourceAsin: string | null
   searchVolume?: string
   competition?: string
   relevance?: string
