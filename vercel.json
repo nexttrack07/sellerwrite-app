@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "analyze-listing": {
+      "maxDuration": 30
+    },
+    "extract-keywords": {
+      "maxDuration": 30
+    }
+  }
+}
