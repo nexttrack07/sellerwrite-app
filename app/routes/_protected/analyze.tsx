@@ -8,10 +8,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/
 import { Badge } from '~/components/ui/badge'
 import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
 import { useServerFn } from '@tanstack/react-start'
+import { analyzeListing } from '~/server/analyze_listing'
 import { fetchProductData } from '~/server/fetch_product'
+import { extractKeywords } from '~/server/extract_keywords'
 import type { ListingAnalysis } from '~/types/analytics'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { X, Search, Brain, Tag } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
@@ -24,50 +26,29 @@ function AnalyzePage() {
   const [asin, setAsin] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [productData, setProductData] = useState<any>(null)
-  const queryClient = useQueryClient()
 
   // Add simulated progress state
   const [simulatedProgress, setSimulatedProgress] = useState(0)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
+
+  // Get the server functions
   const fetchProductFn = useServerFn(fetchProductData)
+  const analyzeListingFn = useServerFn(analyzeListing)
+  const extractKeywordsFn = useServerFn(extractKeywords)
 
-  // Product data fetch mutation (keep using server function)
+  // Product data fetch mutation
   const fetchProductMutation = useMutation({
-    mutationFn: (data: any) => fetchProductFn(data),
+    mutationFn: (data: any) => fetchProductFn({ data }),
   })
 
-  // Analysis mutation - using React Query with fetch
+  // Analysis mutation - using server function
   const analyzeListingMutation = useMutation({
-    mutationFn: async (variables: any) => {
-      const response = await fetch('/api/analyze-listing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(variables),
-      })
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-
-      return response.json()
-    },
+    mutationFn: (data: any) => analyzeListingFn({ data }),
   })
 
-  // Keyword extraction mutation - using React Query with fetch
+  // Keyword extraction mutation - using server function
   const extractKeywordsMutation = useMutation({
-    mutationFn: async (variables: any) => {
-      const response = await fetch('/api/extract-keywords', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(variables),
-      })
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-
-      return response.json()
-    },
+    mutationFn: (data: any) => extractKeywordsFn({ data }),
   })
 
   // Reset all state and clear analysis
@@ -83,10 +64,7 @@ function AnalyzePage() {
       progressInterval.current = null
     }
 
-    // Reset mutations by invalidating queries
-    queryClient.invalidateQueries()
-
-    // Still need page refresh for fetch product mutation
+    // Still need page refresh for the mutations
     if (fetchProductMutation.status !== 'idle') {
       window.location.reload()
     }
@@ -107,13 +85,13 @@ function AnalyzePage() {
         })
         setProductData(fetchProductMutation.data.productData)
 
-        // Once we have product data, start the analysis using API
+        // Once we have product data, start the analysis
         analyzeListingMutation.mutate({
           asin,
           productData: fetchProductMutation.data.productData,
         })
 
-        // Also start the keyword extraction using API
+        // Also start the keyword extraction
         extractKeywordsMutation.mutate({
           title: fetchProductMutation.data.productData.title,
           description: fetchProductMutation.data.productData.optimizedDescription,
@@ -243,9 +221,7 @@ function AnalyzePage() {
     setProductData(null)
 
     try {
-      fetchProductMutation.mutate({
-        data: { asin },
-      })
+      fetchProductMutation.mutate({ asin })
     } catch (error) {
       console.error('Product fetch error:', error)
       toast.error('Failed to fetch product', {
