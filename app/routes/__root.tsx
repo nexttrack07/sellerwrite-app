@@ -124,6 +124,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               className: 'font-bold underline underline-offset-8',
             }}
             className="p-2 hover:underline underline-offset-8"
+            activeOptions={{ exact: true }}
           >
             Listings
           </Link>
@@ -135,6 +136,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             className="p-2 hover:underline underline-offset-8"
           >
             Analyze
+          </Link>
+          <Link
+            to="/listings/create"
+            activeProps={{
+              className: 'font-bold underline underline-offset-8',
+            }}
+            className="p-2 hover:underline underline-offset-8"
+          >
+            Create
           </Link>
           <div className="ml-auto">
             {user ? (

@@ -6,10 +6,15 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useMutation } from '~/hooks/useMutation'
 import { Button } from '~/components/ui/button'
-import { Card, CardContent, CardFooter } from '~/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '~/components/ui/card'
 import { Asins } from '~/components/Asins'
 import { Keywords } from '~/components/Keywords'
 import { ListingDetails } from '~/components/ListingDetails'
+import { Stepper, type StepItem } from '~/components/Stepper'
+import { Input } from '~/components/ui/input'
+import { Textarea } from '~/components/ui/textarea'
+import { ArrowLeft, ArrowRight, Loader2, X } from 'lucide-react'
+import { useListingStore } from '~/store/listingStore'
 
 // Combined schema for both product listing and listing version
 const createCombinedSchema = z.object({
@@ -81,7 +86,55 @@ export const Route = createFileRoute('/_protected/listings/create')({
   component: CreateListingPage,
 })
 
+// Define the steps for listing creation
+const createListingSteps: StepItem[] = [
+  {
+    title: 'Add ASIN(s)',
+    description: 'Extract keywords from product',
+  },
+  {
+    title: 'Keywords',
+    description: 'Add/Remove relevant keywords',
+  },
+  {
+    title: 'Style',
+    description: 'Pick your listing style',
+  },
+  {
+    title: 'Generate',
+    description: 'Create your listing draft',
+  },
+  {
+    title: 'Review',
+    description: 'Review and make edits',
+  },
+]
+
 function CreateListingPage() {
+  // Use the store
+  const {
+    currentStep,
+    setCurrentStep,
+    asins,
+    asinLoadingStatus,
+    asinErrors,
+    keywords,
+    keywordsLoading,
+    listingStyle,
+    listingTone,
+    generatedContent,
+    contentLoading,
+    addAsin,
+    removeAsin,
+    addKeyword,
+    removeKeyword,
+    toggleKeywordSelection,
+    setListingStyle,
+    setListingTone,
+    generateListing,
+    updateGeneratedContent,
+  } = useListingStore()
+
   const [formData, setFormData] = useState<CreateCombinedInput>({
     marketplace: 'USA',
     asins: [],
@@ -103,6 +156,39 @@ function CreateListingPage() {
     },
   })
 
+  const goToNextStep = () => {
+    setCurrentStep(currentStep + 1)
+  }
+
+  const goToPreviousStep = () => {
+    setCurrentStep(currentStep - 1)
+  }
+
+  const handleStepClick = (step: number) => {
+    // Only allow navigation to steps we've completed or the next one
+    if (step <= currentStep + 1) {
+      setCurrentStep(step)
+    }
+  }
+
+  // Render step content based on current step
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return <ASINInputStep />
+      case 1:
+        return <KeywordsStep />
+      case 2:
+        return <StyleSelectionStep />
+      case 3:
+        return <GenerationStep />
+      case 4:
+        return <ReviewStep />
+      default:
+        return null
+    }
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData({
@@ -118,34 +204,6 @@ function CreateListingPage() {
     setFormData({
       ...formData,
       bullet_points: newBulletPoints,
-    })
-  }
-
-  const handleAddAsin = (asin: string) => {
-    setFormData({
-      ...formData,
-      asins: [...formData.asins, asin],
-    })
-  }
-
-  const handleRemoveAsin = (index: number) => {
-    setFormData({
-      ...formData,
-      asins: formData.asins.filter((_, i) => i !== index),
-    })
-  }
-
-  const handleAddKeyword = (keyword: string) => {
-    setFormData({
-      ...formData,
-      keywords: [...formData.keywords, keyword],
-    })
-  }
-
-  const handleRemoveKeyword = (index: number) => {
-    setFormData({
-      ...formData,
-      keywords: formData.keywords.filter((_, i) => i !== index),
     })
   }
 
@@ -170,36 +228,186 @@ function CreateListingPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 flex flex-wrap flex-col md:flex-row gap-4">
-      <div className="flex w-full">
-        <Asins asins={formData.asins} onAddAsin={handleAddAsin} onRemoveAsin={handleRemoveAsin} />
+    <div className="container max-w-5xl py-10 mx-auto">
+      <h1 className="text-3xl font-bold mb-8">Create Amazon Listing</h1>
+
+      {/* Stepper */}
+      <Stepper steps={createListingSteps} currentStep={currentStep} onStepClick={handleStepClick} className="mb-10" />
+
+      {/* Step Content */}
+      <div className="mb-8">{renderStepContent()}</div>
+
+      {/* Navigation */}
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={goToPreviousStep} disabled={currentStep === 0}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+        </Button>
+
+        <Button onClick={goToNextStep} disabled={currentStep === createListingSteps.length - 1}>
+          Next <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
       </div>
-      <Keywords keywords={formData.keywords} onAddKeyword={handleAddKeyword} onRemoveKeyword={handleRemoveKeyword} />
-
-      <Card className="flex-1">
-        <form onSubmit={handleSubmit}>
-          <CardContent>
-            <ListingDetails
-              title={formData.title}
-              bulletPoints={formData.bullet_points}
-              description={formData.description}
-              marketplace={formData.marketplace}
-              onTitleChange={handleInputChange}
-              onBulletPointChange={handleBulletPointChange}
-              onDescriptionChange={handleInputChange}
-            />
-          </CardContent>
-
-          <CardFooter className="flex justify-end space-x-4 pt-6">
-            <Button type="button" variant="outline" onClick={() => navigate({ to: '/listings' })}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createListingMutation.status === 'pending'}>
-              {createListingMutation.status === 'pending' ? 'Creating...' : 'Create Listing'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
     </div>
+  )
+}
+
+// Placeholder components for each step
+function ASINInputStep() {
+  const { asins, asinLoadingStatus, asinErrors, addAsin, removeAsin } = useListingStore()
+  const [inputValue, setInputValue] = useState('')
+
+  const handleAddASINs = () => {
+    // Split by newlines, commas, or spaces and process each ASIN
+    const asinList = inputValue
+      .split(/[\n,\s]+/)
+      .map((asin) => asin.trim())
+      .filter((asin) => asin.length > 0)
+
+    // Process each ASIN
+    asinList.forEach((asin) => {
+      addAsin(asin)
+    })
+
+    // Clear the input
+    setInputValue('')
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Add Amazon ASINs</CardTitle>
+        <CardDescription>
+          Enter the ASIN(s) of products you want to analyze. We'll extract relevant keywords to help optimize your
+          listing.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="asins" className="block text-sm font-medium mb-1">
+              ASINs
+            </label>
+            <Textarea
+              id="asins"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Enter one or more ASINs, each on a new line (e.g., B01DFKC2SO)"
+              className="min-h-24"
+            />
+            <div className="flex justify-end mt-2">
+              <Button onClick={handleAddASINs}>Add ASINs</Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Keywords will be extracted from the title, bullet points, and description of each ASIN's listing.
+              Including competitor products can help identify additional relevant keywords.
+            </p>
+          </div>
+
+          {/* Display added ASINs */}
+          {asins.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <h3 className="text-sm font-medium">Added ASINs:</h3>
+              <div className="space-y-2">
+                {asins.map((asin) => (
+                  <div key={asin} className="flex items-center justify-between p-2 border rounded-md">
+                    <div className="flex items-center">
+                      <span>{asin}</span>
+                      {asinLoadingStatus[asin] === 'loading' && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                      {asinLoadingStatus[asin] === 'error' && (
+                        <span className="ml-2 text-xs text-red-500">{asinErrors[asin]}</span>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeAsin(asin)}
+                      disabled={asinLoadingStatus[asin] === 'loading'}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="bg-muted/50 p-3 rounded-md">
+            <h4 className="text-sm font-medium mb-1">Pro Tip</h4>
+            <p className="text-xs text-muted-foreground">
+              For best results, include 3-5 ASINs: your main product and a few top competitors. This ensures
+              comprehensive keyword coverage while maintaining relevance.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function KeywordsStep() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Review and Edit Keywords</CardTitle>
+        <CardDescription>
+          We've extracted these keywords from the ASINs you provided. Add, remove, or edit keywords to optimize your
+          listing.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">Keyword management UI would go here</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function StyleSelectionStep() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Select Listing Style</CardTitle>
+        <CardDescription>
+          Choose the style and tone for your listing. This affects how your listing will be written.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">Style selection options would go here</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function GenerationStep() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Generate Listing</CardTitle>
+        <CardDescription>
+          We'll now generate your Amazon listing based on the keywords and style you've selected.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">Generation UI with progress indicator would go here</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ReviewStep() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Review Your Listing</CardTitle>
+        <CardDescription>
+          Review the generated listing content and make any final edits before exporting.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">Listing preview and editing UI would go here</p>
+      </CardContent>
+      <CardFooter>
+        <Button className="ml-auto">Export Listing</Button>
+      </CardFooter>
+    </Card>
   )
 }
