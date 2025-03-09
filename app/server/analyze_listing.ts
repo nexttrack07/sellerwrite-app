@@ -118,6 +118,13 @@ export const analyzeListing = createServerFn()
       }
     } catch (error: any) {
       console.error('API Error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        statusCode: error.status || error.statusCode,
+        type: error.type,
+        stack: error.stack,
+      })
+
       return {
         success: false,
         error: true,

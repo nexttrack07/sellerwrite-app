@@ -10,11 +10,12 @@ import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
 import { useServerFn } from '@tanstack/react-start'
 import { analyzeListing } from '~/server/analyze_listing'
 import { fetchProductData } from '~/server/fetch_product'
+import { extractKeywords } from '~/server/extract_keywords'
 import type { ListingAnalysis } from '~/types/analytics'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
 import { useMutation } from '~/hooks/useMutation'
 import { toast } from 'sonner'
-import { X, Search, Brain } from 'lucide-react'
+import { X, Search, Brain, Tag } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/_protected/analyze')({
@@ -38,6 +39,11 @@ function AnalyzePage() {
   // Analysis mutation - happens after product data is fetched
   const analyzeListingMutation = useMutation({
     fn: useServerFn(analyzeListing),
+  })
+
+  // Add new mutation for keywords
+  const extractKeywordsMutation = useMutation({
+    fn: useServerFn(extractKeywords),
   })
 
   // Reset all state and clear analysis
@@ -79,6 +85,15 @@ function AnalyzePage() {
           data: {
             asin,
             productData: fetchProductMutation.data.productData,
+          },
+        })
+
+        // Also start the keyword extraction
+        extractKeywordsMutation.mutate({
+          data: {
+            title: fetchProductMutation.data.productData.title,
+            description: fetchProductMutation.data.productData.optimizedDescription,
+            bulletPoints: fetchProductMutation.data.productData.featureBullets,
           },
         })
       } else if (fetchProductMutation.data?.error) {
@@ -165,6 +180,33 @@ function AnalyzePage() {
     }
   }, [analyzeListingMutation.status, analyzeListingMutation.data, analyzeListingMutation.error])
 
+  // Add a useEffect to handle keyword extraction status
+  useEffect(() => {
+    if (extractKeywordsMutation.status === 'pending') {
+      toast.loading('Extracting keywords...', {
+        id: 'keywords-toast',
+        description: 'Finding optimal keywords for your listing',
+      })
+    } else if (extractKeywordsMutation.status === 'success') {
+      if (extractKeywordsMutation.data?.success) {
+        toast.success('Keywords extracted!', {
+          id: 'keywords-toast',
+          description: 'Found potential keywords for your listing',
+        })
+      } else if (extractKeywordsMutation.data?.error) {
+        toast.error('Keyword extraction failed', {
+          id: 'keywords-toast',
+          description: extractKeywordsMutation.data.message || 'Unable to extract keywords',
+        })
+      }
+    } else if (extractKeywordsMutation.status === 'error') {
+      toast.error('Keyword extraction failed', {
+        id: 'keywords-toast',
+        description: extractKeywordsMutation.error?.message || 'Something went wrong',
+      })
+    }
+  }, [extractKeywordsMutation.status, extractKeywordsMutation.data, extractKeywordsMutation.error])
+
   // Handle form submission - First fetch product data
   const handleAnalyze = async () => {
     if (!asin.trim() || asin.length !== 10) {
@@ -211,6 +253,34 @@ function AnalyzePage() {
     if (simulatedProgress < 60) return 'Analyzing product bullets and description...'
     if (simulatedProgress < 85) return 'Evaluating competitor differentiation...'
     return 'Finalizing analysis and preparing recommendations...'
+  }
+
+  // Helper to get badge color based on competition
+  const getCompetitionBadgeVariant = (competition: string) => {
+    switch (competition.toLowerCase()) {
+      case 'low':
+        return 'success'
+      case 'medium':
+        return 'warning'
+      case 'high':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
+  // Helper to get badge color based on volume
+  const getVolumeBadgeVariant = (volume: string) => {
+    switch (volume.toLowerCase()) {
+      case 'high':
+        return 'success'
+      case 'medium':
+        return 'secondary'
+      case 'low':
+        return 'outline'
+      default:
+        return 'secondary'
+    }
   }
 
   return (
@@ -415,6 +485,40 @@ function AnalyzePage() {
               </>
             ) : null}
           </div>
+        </div>
+      )}
+
+      {/* Keywords Card - Add after the analysis card */}
+      {extractKeywordsMutation.data?.success && extractKeywordsMutation.data.keywords && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Tag className="h-5 w-5 mr-2" />
+                Potential Keywords
+              </CardTitle>
+              <CardDescription>Long-tail keywords identified for Amazon SEO optimization</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2">
+                {extractKeywordsMutation.data.keywords.map((keywordItem: any, index: number) => (
+                  <div key={index} className="border p-3 rounded-md">
+                    <div className="flex flex-wrap gap-2 items-center mb-2">
+                      <span className="font-medium">{keywordItem.keyword}</span>
+                      <div className="flex-grow"></div>
+                      <Badge variant={getVolumeBadgeVariant(keywordItem.searchVolume)}>
+                        Volume: {keywordItem.searchVolume}
+                      </Badge>
+                      <Badge variant={getCompetitionBadgeVariant(keywordItem.competition)}>
+                        Competition: {keywordItem.competition}
+                      </Badge>
+                      <Badge variant="secondary">{keywordItem.relevance}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
