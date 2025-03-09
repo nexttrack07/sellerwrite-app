@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/server/analyze_listing.ts": {
+      "maxDuration": 30
+    },
+    "app/server/extract_keywords.ts": {
+      "maxDuration": 30
+    },
+    "app/server/fetch-product.ts": {
+      "maxDuration": 30
+    }
+  }
+}
