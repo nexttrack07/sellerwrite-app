@@ -17,6 +17,8 @@ import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { X, Search, Brain, Tag } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
+import { KeywordsTable } from '~/components/KeywordsTable'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 
 export const Route = createFileRoute('/_protected/analyze')({
   component: AnalyzePage,
@@ -283,7 +285,7 @@ function AnalyzePage() {
   }
 
   return (
-    <div className="container py-10 mx-auto">
+    <div className="container py-10 max-w-7xl mx-auto">
       {/* Conditional Rendering: Search Form or Product Image Card */}
       <div className="mb-10">
         {!productData ? (
@@ -356,43 +358,73 @@ function AnalyzePage() {
       {/* Results Section */}
       {(fetchProductMutation.data?.success || analyzeListingMutation.data?.success) && (
         <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product Information */}
+          {/* Tabs for Product Info and Keywords - on the left side */}
           <div className="col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Product Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Product title */}
-                <h3 className="text-xl font-semibold mb-4">{productTitle}</h3>
+            <Tabs defaultValue="product" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="product">Product Information</TabsTrigger>
+                <TabsTrigger value="keywords">Keywords</TabsTrigger>
+              </TabsList>
 
-                {/* Feature bullets */}
-                <div className="mb-6">
-                  <h4 className="font-semibold text-lg mb-2">Key Features</h4>
-                  <ul className="list-disc pl-5 text-sm space-y-2">
-                    {(
-                      productData?.featureBullets ||
-                      analyzeListingMutation.data?.listingData?.featureBullets ||
-                      []
-                    ).map((bullet: string, index: number) => (
-                      <li key={index}>{bullet}</li>
-                    ))}
-                  </ul>
-                </div>
+              {/* Product Information Tab */}
+              <TabsContent value="product">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Product Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Product title */}
+                    <h3 className="text-xl font-semibold mb-4">{productTitle}</h3>
 
-                {/* Product description */}
-                <div>
-                  <h4 className="font-semibold text-lg mb-2">Description</h4>
-                  <p className="text-muted-foreground text-sm">
-                    {productData?.optimizedDescription ||
-                      (analyzeListingMutation.data?.listingData?.optimizedDescription as string)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                    {/* Feature bullets */}
+                    <div className="mb-6">
+                      <h4 className="font-semibold text-lg mb-2">Key Features</h4>
+                      <ul className="list-disc pl-5 text-sm space-y-2">
+                        {(
+                          productData?.featureBullets ||
+                          analyzeListingMutation.data?.listingData?.featureBullets ||
+                          []
+                        ).map((bullet: string, index: number) => (
+                          <li key={index}>{bullet}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Product description */}
+                    <div>
+                      <h4 className="font-semibold text-lg mb-2">Description</h4>
+                      <p className="text-muted-foreground text-sm">
+                        {productData?.optimizedDescription ||
+                          (analyzeListingMutation.data?.listingData?.optimizedDescription as string)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Keywords Tab */}
+              <TabsContent value="keywords">
+                {extractKeywordsMutation.data?.success && extractKeywordsMutation.data.keywords ? (
+                  <KeywordsTable keywords={extractKeywordsMutation.data.keywords} />
+                ) : (
+                  <Card>
+                    <CardContent className="flex items-center justify-center py-10">
+                      {extractKeywordsMutation.status === 'pending' ? (
+                        <div className="text-center">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                          <p className="text-muted-foreground">Extracting keywords...</p>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No keywords available yet</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* Analysis Results */}
+          {/* Analysis Results - on the right side */}
           <div className="space-y-6">
             {analyzeListingMutation.status === 'pending' ? (
               <Card>
@@ -484,40 +516,6 @@ function AnalyzePage() {
               </>
             ) : null}
           </div>
-        </div>
-      )}
-
-      {/* Keywords Card - Add after the analysis card */}
-      {extractKeywordsMutation.data?.success && extractKeywordsMutation.data.keywords && (
-        <div className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Tag className="h-5 w-5 mr-2" />
-                Potential Keywords
-              </CardTitle>
-              <CardDescription>Long-tail keywords identified for Amazon SEO optimization</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-2">
-                {extractKeywordsMutation.data.keywords.map((keywordItem: any, index: number) => (
-                  <div key={index} className="border p-3 rounded-md">
-                    <div className="flex flex-wrap gap-2 items-center mb-2">
-                      <span className="font-medium">{keywordItem.keyword}</span>
-                      <div className="flex-grow"></div>
-                      <Badge variant={getVolumeBadgeVariant(keywordItem.searchVolume)}>
-                        Volume: {keywordItem.searchVolume}
-                      </Badge>
-                      <Badge variant={getCompetitionBadgeVariant(keywordItem.competition)}>
-                        Competition: {keywordItem.competition}
-                      </Badge>
-                      <Badge variant="secondary">{keywordItem.relevance}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
     </div>
