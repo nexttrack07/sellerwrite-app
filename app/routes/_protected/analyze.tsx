@@ -8,12 +8,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/
 import { Badge } from '~/components/ui/badge'
 import { Alert, AlertTitle, AlertDescription } from '~/components/ui/alert'
 import { useServerFn } from '@tanstack/react-start'
-import { analyzeListing } from '~/server/analyze_listing'
 import { fetchProductData } from '~/server/fetch_product'
-import { extractKeywords } from '~/server/extract_keywords'
 import type { ListingAnalysis } from '~/types/analytics'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
-import { useMutation } from '~/hooks/useMutation'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { X, Search, Brain, Tag } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
@@ -26,24 +24,50 @@ function AnalyzePage() {
   const [asin, setAsin] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [productData, setProductData] = useState<any>(null)
+  const queryClient = useQueryClient()
 
   // Add simulated progress state
   const [simulatedProgress, setSimulatedProgress] = useState(0)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
+  const fetchProductFn = useServerFn(fetchProductData)
 
-  // Product data fetch mutation
+  // Product data fetch mutation (keep using server function)
   const fetchProductMutation = useMutation({
-    fn: useServerFn(fetchProductData),
+    mutationFn: (data: any) => fetchProductFn(data),
   })
 
-  // Analysis mutation - happens after product data is fetched
+  // Analysis mutation - using React Query with fetch
   const analyzeListingMutation = useMutation({
-    fn: useServerFn(analyzeListing),
+    mutationFn: async (variables: any) => {
+      const response = await fetch('/api/analyze-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(variables),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      return response.json()
+    },
   })
 
-  // Add new mutation for keywords
+  // Keyword extraction mutation - using React Query with fetch
   const extractKeywordsMutation = useMutation({
-    fn: useServerFn(extractKeywords),
+    mutationFn: async (variables: any) => {
+      const response = await fetch('/api/extract-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(variables),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      return response.json()
+    },
   })
 
   // Reset all state and clear analysis
@@ -59,7 +83,10 @@ function AnalyzePage() {
       progressInterval.current = null
     }
 
-    // Manually reset mutation states since there's no reset() method
+    // Reset mutations by invalidating queries
+    queryClient.invalidateQueries()
+
+    // Still need page refresh for fetch product mutation
     if (fetchProductMutation.status !== 'idle') {
       window.location.reload()
     }
@@ -80,21 +107,17 @@ function AnalyzePage() {
         })
         setProductData(fetchProductMutation.data.productData)
 
-        // Once we have product data, start the analysis
+        // Once we have product data, start the analysis using API
         analyzeListingMutation.mutate({
-          data: {
-            asin,
-            productData: fetchProductMutation.data.productData,
-          },
+          asin,
+          productData: fetchProductMutation.data.productData,
         })
 
-        // Also start the keyword extraction
+        // Also start the keyword extraction using API
         extractKeywordsMutation.mutate({
-          data: {
-            title: fetchProductMutation.data.productData.title,
-            description: fetchProductMutation.data.productData.optimizedDescription,
-            bulletPoints: fetchProductMutation.data.productData.featureBullets,
-          },
+          title: fetchProductMutation.data.productData.title,
+          description: fetchProductMutation.data.productData.optimizedDescription,
+          bulletPoints: fetchProductMutation.data.productData.featureBullets,
         })
       } else if (fetchProductMutation.data?.error) {
         toast.error('Failed to fetch product', {
@@ -154,9 +177,9 @@ function AnalyzePage() {
   // Monitor analysis status changes
   useEffect(() => {
     if (analyzeListingMutation.status === 'pending') {
-      toast.loading('Analyzing Amazon listing...', {
+      toast.loading('Analyzing your product...', {
         id: 'analyze-toast',
-        description: `AI is evaluating your listing...`,
+        description: 'Our AI is evaluating your listing against best practices',
       })
     } else if (analyzeListingMutation.status === 'success') {
       if (analyzeListingMutation.data?.success) {
@@ -176,11 +199,11 @@ function AnalyzePage() {
         id: 'analyze-toast',
         description: analyzeListingMutation.error?.message || 'Something went wrong during analysis.',
       })
-      console.error(analyzeListingMutation.error?.message)
+      console.error(analyzeListingMutation.error)
     }
   }, [analyzeListingMutation.status, analyzeListingMutation.data, analyzeListingMutation.error])
 
-  // Add a useEffect to handle keyword extraction status
+  // Monitor keyword extraction status
   useEffect(() => {
     if (extractKeywordsMutation.status === 'pending') {
       toast.loading('Extracting keywords...', {
