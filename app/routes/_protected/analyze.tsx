@@ -405,7 +405,7 @@ function AnalyzePage() {
               {/* Keywords Tab */}
               <TabsContent value="keywords">
                 {extractKeywordsMutation.data?.success && extractKeywordsMutation.data.keywords ? (
-                  <KeywordsTable keywords={extractKeywordsMutation.data.keywords} />
+                  <KeywordsTable keywords={extractKeywordsMutation.data.keywords as any} />
                 ) : (
                   <Card>
                     <CardContent className="flex items-center justify-center py-10">
