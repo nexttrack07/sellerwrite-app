@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { fetchProductData } from '~/server/fetch_product'
 import { extractKeywords } from '~/server/extract_keywords'
+import { Style } from '~/types/schemas'
 
 // Define types for our store
 interface ProductData {
@@ -48,7 +49,7 @@ interface ListingState {
   keywordsLoading: boolean
 
   // Listing configuration
-  listingStyle: 'professional' | 'conversational' | 'enthusiastic'
+  listingStyle: Style
   listingTone: number // 1-10
 
   // Generated listing content
@@ -74,7 +75,7 @@ interface ListingState {
   toggleKeywordSelection: (keywordId: string) => void
 
   // Listing actions
-  setListingStyle: (style: 'professional' | 'conversational' | 'enthusiastic') => void
+  setListingStyle: (style: Style) => void
   setListingTone: (tone: number) => void
   generateListing: () => Promise<void>
   updateGeneratedContent: (content: Partial<ListingContent>) => void

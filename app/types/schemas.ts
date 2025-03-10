@@ -13,12 +13,13 @@ export const jsonSchema: z.ZodType<any> = z.union([
 // Style enum schema
 export const styleSchema = z.enum([
   'professional',
-  'casual',
-  'technical',
-  'friendly',
+  'conversational',
   'enthusiastic',
-  'formal',
-  'informative',
+  'benefit-focused',
+  'problem-solution',
+  'technical',
+  'premium',
+  'lifestyle',
 ])
 
 // Product Listing schema

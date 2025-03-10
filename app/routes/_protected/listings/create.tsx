@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
-import { styleSchema } from '~/types/schemas'
+import { Style, styleSchema } from '~/types/schemas'
 import { getSupabaseServerClient } from '~/utils/supabase'
 import { useState, useMemo } from 'react'
 import { z } from 'zod'
@@ -16,6 +16,8 @@ import { Textarea } from '~/components/ui/textarea'
 import { ArrowLeft, ArrowRight, Loader2, X, Search } from 'lucide-react'
 import { useListingStore } from '~/store/listingStore'
 import { KeywordsList } from '~/components/KeywordsList'
+import { RadioCardGroup, RadioCardOption } from '~/components/ui/radio-card-group'
+import { Target, Wrench, Cpu, Crown, Compass } from 'lucide-react'
 
 // Combined schema for both product listing and listing version
 const createCombinedSchema = z.object({
@@ -112,6 +114,40 @@ const createListingSteps: StepItem[] = [
   {
     title: 'Review',
     description: 'Review and make edits',
+  },
+]
+
+// Define the copywriting style options
+const copywritingStyles: RadioCardOption[] = [
+  {
+    id: 'benefit-focused',
+    title: 'Benefit-Focused',
+    description: "Emphasizes how the product improves the customer's life or solves their problems.",
+    icon: <Target className="h-4 w-4" />,
+  },
+  {
+    id: 'problem-solution',
+    title: 'Problem-Solution',
+    description: 'Directly addresses a pain point and positions the product as the solution.',
+    icon: <Wrench className="h-4 w-4" />,
+  },
+  {
+    id: 'technical',
+    title: 'Technical/Specification',
+    description: 'Focuses on detailed specifications and technical features of the product.',
+    icon: <Cpu className="h-4 w-4" />,
+  },
+  {
+    id: 'premium',
+    title: 'Premium/Luxury',
+    description: 'Highlights quality, craftsmanship, and exclusivity to justify premium pricing.',
+    icon: <Crown className="h-4 w-4" />,
+  },
+  {
+    id: 'lifestyle',
+    title: 'Lifestyle-Oriented',
+    description: 'Connects the product to specific activities, interests, or identity of the target audience.',
+    icon: <Compass className="h-4 w-4" />,
   },
 ]
 
@@ -625,6 +661,17 @@ function KeywordsStep() {
 }
 
 function StyleSelectionStep() {
+  // Use the store for style selection
+  const { listingStyle, setListingStyle } = useListingStore()
+
+  // Use listingStyle from the store instead of local state
+  const selectedStyle = listingStyle || 'benefit-focused'
+
+  // Update the store when style changes
+  const handleStyleChange = (style: string) => {
+    setListingStyle(style as Style)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -634,7 +681,40 @@ function StyleSelectionStep() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-muted-foreground">Style selection options would go here</p>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">Choose a Copywriting Style</h2>
+            <p className="text-muted-foreground mb-4">
+              Select a style that best fits your product and target audience.
+            </p>
+
+            <RadioCardGroup
+              options={copywritingStyles}
+              value={selectedStyle}
+              onChange={handleStyleChange}
+              className="mt-4"
+            />
+          </div>
+
+          {/* Example of the selected style */}
+          <div className="bg-muted/30 p-4 rounded-md">
+            <h3 className="font-medium mb-2">
+              Example Title in {copywritingStyles.find((s) => s.id === selectedStyle)?.title} Style:
+            </h3>
+            <p className="text-sm">
+              {selectedStyle === 'benefit-focused' &&
+                '"Memory Foam Pillow for Neck Pain Relief - Orthopedic Support for Better Sleep with Cooling Gel Technology"'}
+              {selectedStyle === 'problem-solution' &&
+                '"No-Drip Shower Caddy with Rust-Proof Guarantee - Solves Bathroom Storage Problems with 5 Adjustable Shelves"'}
+              {selectedStyle === 'technical' &&
+                '"1080p Wireless Security Camera, 360° Pan/Tilt, 2-Way Audio, Night Vision, Motion Detection, IP65 Waterproof"'}
+              {selectedStyle === 'premium' &&
+                '"Handcrafted Italian Leather Wallet for Men - Full-Grain RFID Blocking Bifold with Gift Box"'}
+              {selectedStyle === 'lifestyle' &&
+                '"Portable Espresso Maker for Camping, Travel & Office - Compact Coffee Companion for Adventure Enthusiasts"'}
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
