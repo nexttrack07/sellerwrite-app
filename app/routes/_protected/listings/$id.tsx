@@ -7,7 +7,7 @@ import { Textarea } from '~/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { Badge } from '~/components/ui/badge'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
-import { Loader2, Save, ArrowLeft, Tag, Edit2, Check, X, Brain } from 'lucide-react'
+import { Loader2, Save, ArrowLeft, Tag, Edit2, Check, X, Brain, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '~/components/ui/button'
@@ -78,7 +78,7 @@ function ListingDetailsPage() {
     queryFn: () => {
       // Make sure we have the required data before making the query
       if (!id || !listing?.version_id) {
-        return Promise.resolve({ success: false, exists: false })
+        return Promise.resolve({ success: false, exists: false, error: null, analysis: null })
       }
 
       // Make sure we're passing the data in the correct structure
@@ -534,10 +534,25 @@ function ListingDetailsPage() {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Brain className="h-5 w-5 mr-2" />
-                Listing Analysis
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center">
+                  <Brain className="h-5 w-5 mr-2" />
+                  Listing Analysis
+                </CardTitle>
+                {/* Add redo button - only enabled if there's a version mismatch */}
+                {existingAnalysis?.exists && existingAnalysis.success && existingAnalysis.analysis && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title="Re-analyze listing"
+                    // Only enable if the current version doesn't match the analyzed version
+                    disabled={listing.version_id === existingAnalysis.analysis.version_id}
+                    onClick={handleAnalyzeListing}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <CardDescription>Analyze your listing to get optimization recommendations and insights.</CardDescription>
             </CardHeader>
             <CardContent>

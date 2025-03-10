@@ -2,19 +2,6 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { getSupabaseServerClient } from '~/utils/supabase'
 
-// Schema for listing analysis
-const listingAnalysisSchema = z.object({
-  listing_id: z.union([z.number(), z.string().regex(/^\d+$/).transform(Number)]),
-  version_id: z.union([z.number(), z.string().regex(/^\d+$/).transform(Number)]),
-  analysis_data: z.record(z.any()), // JSONB data for the analysis results
-})
-
-// Schema for fetching an analysis
-const fetchAnalysisSchema = z.object({
-  listing_id: z.union([z.number(), z.string().regex(/^\d+$/).transform(Number)]),
-  version_id: z.union([z.number(), z.string().regex(/^\d+$/).transform(Number)]),
-})
-
 // Server function to save a listing analysis
 export const saveAnalysis = createServerFn({
   method: 'POST',
@@ -99,49 +86,50 @@ export const fetchAnalysis = createServerFn({
       })
       .parse(input)
   })
-  .handler(
-    async ({
-      data,
-    }): Promise<
-      | { success: true; exists: true; analysis: any }
-      | { success: true; exists: false }
-      | { success: false; exists: false; error: string }
-    > => {
-      const supabase = await getSupabaseServerClient()
+  .handler(async ({ data }): Promise<{ success: boolean; exists: boolean; error: string | null; analysis: any }> => {
+    const supabase = await getSupabaseServerClient()
 
-      console.log('data', data)
-      // Add additional validation
-      if (!data.listing_id || !data.version_id) {
-        return {
-          success: false,
-          exists: false,
-          error: 'Missing required fields: listing_id and version_id',
-        }
-      }
-
-      // Get the analysis for the specified listing and version
-      const { data: analysis, error } = await supabase
-        .from('listing_analyses')
-        .select('*')
-        .eq('listing_id', data.listing_id)
-        .eq('version_id', data.version_id)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No analysis found
-          return {
-            success: true,
-            exists: false,
-          }
-        }
-        throw new Error(`Failed to fetch analysis: ${error.message}`)
-      }
-
+    console.log('data', data)
+    // Add additional validation
+    if (!data.listing_id || !data.version_id) {
       return {
-        success: true,
-        exists: true,
-        analysis,
+        success: false,
+        exists: false,
+        error: 'Missing required fields: listing_id and version_id',
+        analysis: null,
       }
-    },
-  )
+    }
+
+    // Get the analysis for the specified listing and version
+    const { data: analysis, error } = await supabase
+      .from('listing_analyses')
+      .select('*')
+      .eq('listing_id', data.listing_id)
+      // Get the latest analysis
+      .order('created_at', { ascending: false })
+      // Limit to just one row
+      .limit(1)
+      .maybeSingle() // Use maybeSingle instead of single
+
+    console.log('error', error)
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No analysis found
+        return {
+          success: true,
+          exists: false,
+          error: null,
+          analysis: null,
+        }
+      }
+      throw new Error(`Failed to fetch analysis: ${error.message}`)
+    }
+
+    return {
+      success: true,
+      exists: true,
+      error: null,
+      analysis,
+    }
+  })
