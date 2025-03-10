@@ -223,16 +223,7 @@ function ListingDetailsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Product image if available */}
-              {listing.asins && listing.asins.length > 0 && (
-                <div className="w-full md:w-1/4">
-                  <AspectRatio ratio={1 / 1} className="bg-muted rounded-md overflow-hidden">
-                    <div className="flex items-center justify-center h-full text-muted-foreground">Product Image</div>
-                  </AspectRatio>
-                </div>
-              )}
-
-              {/* Basic listing info */}
+              {/* Basic listing info - now takes full width */}
               <div className="flex-1 space-y-4">
                 <div>
                   <h2 className="text-xl font-semibold">{listing.title}</h2>
