@@ -9,11 +9,11 @@ import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge'
 import { PlusIcon, ClipboardListIcon } from 'lucide-react'
 
-export const fetchListings = createServerFn({ 
-  method: 'GET' 
+export const fetchListings = createServerFn({
+  method: 'GET',
 }).handler(async () => {
-  const supabase = await getSupabaseServerClient();
-  const {data, error} = await supabase.from('product_listings').select('*')
+  const supabase = await getSupabaseServerClient()
+  const { data, error } = await supabase.from('product_listings').select('*')
 
   if (error) {
     throw new Error(error.message)
@@ -21,13 +21,13 @@ export const fetchListings = createServerFn({
 
   // Validate with Zod to ensure type safety
   return z.array(productListingSchema).parse(
-    data.map(item => ({
+    data.map((item) => ({
       ...item,
       // Ensure these are arrays of strings
       asins: Array.isArray(item.asins) ? item.asins : [],
-      keywords: Array.isArray(item.keywords) ? item.keywords : []
-    }))
-  );
+      keywords: Array.isArray(item.keywords) ? item.keywords : [],
+    })),
+  )
 })
 
 export const Route = createFileRoute('/_protected/listings/')({
@@ -49,7 +49,7 @@ function ListingsComponent() {
           </Link>
         </Button>
       </div>
-      
+
       {listings?.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -66,55 +66,58 @@ function ListingsComponent() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings?.map((listing) => (
-            <Card key={listing.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xl">{listing.marketplace}</CardTitle>
-                <Badge variant="outline">{listing.style}</Badge>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">Tone: {listing.tone}/10</Badge>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium leading-none mb-3">ASINs</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.asins.map((asin, i) => (
-                      <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                        {asin}
-                      </Badge>
-                    ))}
-                    {listing.asins.length === 0 && 
-                      <span className="text-sm text-muted-foreground">No ASINs</span>
-                    }
+            <Link
+              key={listing.id}
+              to="/listings/$id"
+              params={{ id: listing.id.toString() }}
+              className="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
+            >
+              <Card className="h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xl">{listing.marketplace}</CardTitle>
+                  <Badge variant="outline">{listing.style}</Badge>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">Tone: {listing.tone}/10</Badge>
                   </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium leading-none mb-3">Keywords</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.keywords.map((keyword, i) => (
-                      <Badge key={i} variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
-                        {keyword}
-                      </Badge>
-                    ))}
-                    {listing.keywords.length === 0 && 
-                      <span className="text-sm text-muted-foreground">No keywords</span>
-                    }
+                  <div>
+                    <h4 className="text-sm font-medium leading-none mb-3">ASINs</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.asins.map((asin, i) => (
+                        <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                          {asin}
+                        </Badge>
+                      ))}
+                      {listing.asins.length === 0 && <span className="text-sm text-muted-foreground">No ASINs</span>}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end pt-0">
-                <Button variant="outline" asChild>
-                  <Link
-                    to={`/listings`}
-                  >
-                    View Details
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+                  <div>
+                    <h4 className="text-sm font-medium leading-none mb-3">Keywords</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.keywords.map((keyword, i) => (
+                        <Badge key={i} variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
+                          {keyword}
+                        </Badge>
+                      ))}
+                      {listing.keywords.length === 0 && (
+                        <span className="text-sm text-muted-foreground">No keywords</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end pt-0">
+                  <Button variant="outline" asChild>
+                    <Link to="/listings/$id" params={{ id: listing.id.toString() }}>
+                      View Details
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
     </div>
   )
-} 
+}

@@ -19,6 +19,7 @@ import { Route as IndexImport } from './routes/index'
 import { Route as ProtectedAnalyzeImport } from './routes/_protected/analyze'
 import { Route as ProtectedListingsIndexImport } from './routes/_protected/listings/index'
 import { Route as ProtectedListingsCreateImport } from './routes/_protected/listings/create'
+import { Route as ProtectedListingsIdImport } from './routes/_protected/listings/$id'
 
 // Create/Update Routes
 
@@ -69,6 +70,12 @@ const ProtectedListingsCreateRoute = ProtectedListingsCreateImport.update({
   getParentRoute: () => ProtectedRoute,
 } as any)
 
+const ProtectedListingsIdRoute = ProtectedListingsIdImport.update({
+  id: '/listings/$id',
+  path: '/listings/$id',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -115,6 +122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedAnalyzeImport
       parentRoute: typeof ProtectedImport
     }
+    '/_protected/listings/$id': {
+      id: '/_protected/listings/$id'
+      path: '/listings/$id'
+      fullPath: '/listings/$id'
+      preLoaderRoute: typeof ProtectedListingsIdImport
+      parentRoute: typeof ProtectedImport
+    }
     '/_protected/listings/create': {
       id: '/_protected/listings/create'
       path: '/listings/create'
@@ -136,12 +150,14 @@ declare module '@tanstack/react-router' {
 
 interface ProtectedRouteChildren {
   ProtectedAnalyzeRoute: typeof ProtectedAnalyzeRoute
+  ProtectedListingsIdRoute: typeof ProtectedListingsIdRoute
   ProtectedListingsCreateRoute: typeof ProtectedListingsCreateRoute
   ProtectedListingsIndexRoute: typeof ProtectedListingsIndexRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedAnalyzeRoute: ProtectedAnalyzeRoute,
+  ProtectedListingsIdRoute: ProtectedListingsIdRoute,
   ProtectedListingsCreateRoute: ProtectedListingsCreateRoute,
   ProtectedListingsIndexRoute: ProtectedListingsIndexRoute,
 }
@@ -157,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/analyze': typeof ProtectedAnalyzeRoute
+  '/listings/$id': typeof ProtectedListingsIdRoute
   '/listings/create': typeof ProtectedListingsCreateRoute
   '/listings': typeof ProtectedListingsIndexRoute
 }
@@ -168,6 +185,7 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/analyze': typeof ProtectedAnalyzeRoute
+  '/listings/$id': typeof ProtectedListingsIdRoute
   '/listings/create': typeof ProtectedListingsCreateRoute
   '/listings': typeof ProtectedListingsIndexRoute
 }
@@ -180,6 +198,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/_protected/analyze': typeof ProtectedAnalyzeRoute
+  '/_protected/listings/$id': typeof ProtectedListingsIdRoute
   '/_protected/listings/create': typeof ProtectedListingsCreateRoute
   '/_protected/listings/': typeof ProtectedListingsIndexRoute
 }
@@ -193,6 +212,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/analyze'
+    | '/listings/$id'
     | '/listings/create'
     | '/listings'
   fileRoutesByTo: FileRoutesByTo
@@ -203,6 +223,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/analyze'
+    | '/listings/$id'
     | '/listings/create'
     | '/listings'
   id:
@@ -213,6 +234,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/_protected/analyze'
+    | '/_protected/listings/$id'
     | '/_protected/listings/create'
     | '/_protected/listings/'
   fileRoutesById: FileRoutesById
@@ -258,6 +280,7 @@ export const routeTree = rootRoute
       "filePath": "_protected.tsx",
       "children": [
         "/_protected/analyze",
+        "/_protected/listings/$id",
         "/_protected/listings/create",
         "/_protected/listings/"
       ]
@@ -273,6 +296,10 @@ export const routeTree = rootRoute
     },
     "/_protected/analyze": {
       "filePath": "_protected/analyze.tsx",
+      "parent": "/_protected"
+    },
+    "/_protected/listings/$id": {
+      "filePath": "_protected/listings/$id.tsx",
       "parent": "/_protected"
     },
     "/_protected/listings/create": {
