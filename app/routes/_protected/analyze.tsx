@@ -15,10 +15,13 @@ import type { ListingAnalysis } from '~/types/analytics'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { X, Search, Brain, Tag } from 'lucide-react'
+import { X, Search, Brain, Tag, Save } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
 import { KeywordsTable } from '~/components/KeywordsTable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
+import { useNavigate } from '@tanstack/react-router'
+import { createListing } from '~/server/create_listing'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
 
 export const Route = createFileRoute('/_protected/analyze')({
   component: AnalyzePage,
@@ -37,6 +40,7 @@ function AnalyzePage() {
   const fetchProductFn = useServerFn(fetchProductData)
   const analyzeListingFn = useServerFn(analyzeListing)
   const extractKeywordsFn = useServerFn(extractKeywords)
+  const createListingFn = useServerFn(createListing)
 
   // Product data fetch mutation
   const fetchProductMutation = useMutation({
@@ -52,6 +56,24 @@ function AnalyzePage() {
   const extractKeywordsMutation = useMutation({
     mutationFn: (data: any) => extractKeywordsFn({ data }),
   })
+
+  // Add mutation for saving the listing
+  const saveListingMutation = useMutation({
+    mutationFn: (data: any) => createListingFn({ data }),
+    onSuccess: (result) => {
+      toast.success('Listing saved successfully!')
+      // Navigate to the listing details page
+      navigate({ to: '/listings/$id', params: { id: result.listing_id.toString() } })
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to save listing', {
+        description: error.message || 'An unknown error occurred',
+      })
+      console.error(error)
+    },
+  })
+
+  const navigate = useNavigate()
 
   // Reset all state and clear analysis
   const resetAnalysis = () => {
@@ -284,8 +306,72 @@ function AnalyzePage() {
     }
   }
 
+  // Fix the handleSave function to properly source data
+  const handleSave = () => {
+    // Check if we have product data
+    if (!productData) {
+      toast.error('No product data available')
+      return
+    }
+
+    // Check if we have analysis data
+    if (!analyzeListingMutation.data?.success || !analyzeListingMutation.data.analysis) {
+      toast.error('No analysis data available')
+      return
+    }
+
+    const analysis = analyzeListingMutation.data.analysis
+
+    // Get the title from the product data
+    const title = productData.title
+
+    // Get the description and bullet points from the analysis
+    const description = productData.optimizedDescription
+
+    // Filter out any empty bullet points
+    const nonEmptyBulletPoints = productData.featureBullets.filter(
+      (point: string) => typeof point === 'string' && point.trim() !== '',
+    )
+
+    // Validate required fields
+    if (!title) {
+      toast.error('Missing product title')
+      return
+    }
+
+    if (!description) {
+      toast.error('Missing product description')
+      return
+    }
+
+    if (!nonEmptyBulletPoints.length) {
+      toast.error('At least one bullet point is required')
+      return
+    }
+
+    // Prepare the data for saving
+    const listingData = {
+      title: title,
+      description: description,
+      bullet_points: nonEmptyBulletPoints,
+      asins: [asin],
+      keywords:
+        extractKeywordsMutation.data?.keywords
+          ?.map((k) => (typeof k === 'string' ? k : k.keyword || ''))
+          .filter(Boolean) || [],
+      marketplace: 'amazon.com',
+      style: 'professional',
+      tone: 5,
+    }
+
+    console.log('Saving listing data:', listingData)
+
+    // Save the listing
+    saveListingMutation.mutate({ data: listingData })
+  }
+
   return (
-    <div className="container py-10 max-w-7xl mx-auto">
+    <div className="container px-6 py-10 max-w-7xl mx-auto">
       {/* Conditional Rendering: Search Form or Product Image Card */}
       <div className="mb-10">
         {!productData ? (
@@ -321,37 +407,72 @@ function AnalyzePage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="flex justify-center">
-            <Card className="w-auto max-w-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  {/* Product Thumbnail */}
-                  <div className="relative w-16 h-16 flex-shrink-0">
-                    <AspectRatio ratio={1}>
+          <Card className="w-full">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                {/* Product Thumbnail - much smaller */}
+                <div className="relative w-16 h-16 flex-shrink-0">
+                  <AspectRatio ratio={1}>
+                    {productImage ? (
                       <img src={productImage} alt={productTitle} className="rounded-md object-cover w-full h-full" />
-                    </AspectRatio>
-                  </div>
-
-                  {/* Product ASIN & Brief Info */}
-                  <div className="flex-grow min-w-0">
-                    <div className="font-medium text-sm truncate">{productTitle}</div>
-                    <div className="text-xs text-muted-foreground">ASIN: {asin}</div>
-                  </div>
-
-                  {/* Reset Button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={resetAnalysis}
-                    className="ml-auto flex-shrink-0"
-                    aria-label="Clear and start over"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                        No image
+                      </div>
+                    )}
+                  </AspectRatio>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+
+                {/* Product ASIN & Brief Info */}
+                <div className="flex-grow min-w-0">
+                  <div className="font-medium text-sm truncate">{productTitle}</div>
+                  <div className="text-xs text-muted-foreground">ASIN: {asin}</div>
+                </div>
+
+                {/* Save button with tooltip - only when analysis is complete */}
+                {analyzeListingMutation.data?.success && analyzeListingMutation.data.analysis && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleSave}
+                          disabled={saveListingMutation.isPending}
+                          className="ml-auto flex-shrink-0"
+                          size="sm"
+                        >
+                          {saveListingMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-3 w-3" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Save to your listings for viewing and editing later</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+                {/* Reset Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={resetAnalysis}
+                  className="flex-shrink-0"
+                  aria-label="Clear and start over"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 

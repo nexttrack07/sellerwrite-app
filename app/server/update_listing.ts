@@ -27,7 +27,33 @@ export const updateListing = createServerFn({
     // Get non-empty bullet points only
     const nonEmptyBulletPoints = data.data.bullet_points.filter((point) => point.trim() !== '')
 
-    // Create a new version with is_current=true
+    // 1. First, set all existing versions to is_current=false
+    const { error: updateError } = await supabase
+      .from('listing_versions')
+      .update({ is_current: false })
+      .eq('listing_id', data.data.id)
+
+    if (updateError) {
+      throw new Error(`Failed to update version statuses: ${updateError.message}`)
+    }
+
+    // 2. Get the latest version number
+    const { data: versions, error: versionsError } = await supabase
+      .from('listing_versions')
+      .select('version_number')
+      .eq('listing_id', data.data.id)
+      .order('version_number', { ascending: false })
+      .limit(1)
+
+    if (versionsError) {
+      throw new Error(`Failed to get latest version: ${versionsError.message}`)
+    }
+
+    // Calculate the next version number
+    const latestVersion = versions && versions.length > 0 ? versions[0].version_number : 0
+    const nextVersionNumber = latestVersion + 1
+
+    // 3. Create a new version with is_current=true and incremented version number
     const { data: newVersion, error: versionError } = await supabase
       .from('listing_versions')
       .insert({
@@ -36,24 +62,13 @@ export const updateListing = createServerFn({
         description: data.data.description,
         bullet_points: nonEmptyBulletPoints,
         is_current: true,
-        version_number: 1,
+        version_number: nextVersionNumber,
       })
       .select()
       .single()
 
     if (versionError) {
       throw new Error(`Failed to create new version: ${versionError.message}`)
-    }
-
-    // Set all other versions to inactive
-    const { error: updateError } = await supabase
-      .from('listing_versions')
-      .update({ is_current: false })
-      .eq('listing_id', data.data.id)
-      .neq('id', newVersion.id)
-
-    if (updateError) {
-      throw new Error(`Failed to update version statuses: ${updateError.message}`)
     }
 
     return { success: true, version: newVersion }

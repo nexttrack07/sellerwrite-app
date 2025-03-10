@@ -9,7 +9,7 @@ import { Badge } from '~/components/ui/badge'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
 import { Loader2, Save, ArrowLeft, Tag, Edit2, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '~/components/ui/button'
 import { KeywordsList } from '~/components/KeywordsList'
 
@@ -75,6 +75,8 @@ function ListingDetailsPage() {
     }
   }, [isError, error])
 
+  const queryClient = useQueryClient()
+
   // Editable state - initialize from listing data when available
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState('')
@@ -129,41 +131,30 @@ function ListingDetailsPage() {
   }
 
   // Update listing mutation using React Query's useMutation
-  const updateListingMutation = useMutation<
-    { success: boolean; version: any },
-    Error,
-    { data: typeof updateListingSchema._type }
-  >({
-    mutationFn: (variables) => updateListingFn(variables),
+  const updateListingMutation = useMutation({
+    mutationFn: (formData: { data: typeof updateListingSchema._type }) => updateListingFn({ data: formData }),
     onSuccess: () => {
       toast.success('Listing updated successfully')
       setIsEditing(false)
+      queryClient.invalidateQueries({ queryKey: ['listing', id] })
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast.error('Failed to update listing', {
-        description: error.message || 'Unknown error occurred',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
       })
     },
   })
 
   // Handle saving changes
   const handleSave = () => {
-    // Filter out empty bullet points
-    const nonEmptyBulletPoints = bulletPoints.filter((point) => point.trim() !== '')
-
-    if (nonEmptyBulletPoints.length === 0) {
-      toast.error('At least one bullet point is required')
-      return
+    const updateData = {
+      id: listing!.id,
+      title: title,
+      description: description,
+      bullet_points: bulletPoints.filter((bp) => bp.trim() !== ''),
     }
 
-    updateListingMutation.mutate({
-      data: {
-        id: Number(id), // Ensure id is a number
-        title,
-        description,
-        bullet_points: bulletPoints,
-      },
-    })
+    updateListingMutation.mutate({ data: updateData })
   }
 
   if (isLoading) {
