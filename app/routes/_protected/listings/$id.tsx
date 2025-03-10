@@ -7,15 +7,18 @@ import { Textarea } from '~/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { Badge } from '~/components/ui/badge'
 import { AspectRatio } from '~/components/ui/aspect-ratio'
-import { Loader2, Save, ArrowLeft, Tag, Edit2, Check, X } from 'lucide-react'
+import { Loader2, Save, ArrowLeft, Tag, Edit2, Check, X, Brain } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '~/components/ui/button'
 import { KeywordsList } from '~/components/KeywordsList'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '~/components/ui/accordion'
 
 // Import server functions from server folder
 import { fetchListing } from '~/server/fetch_listing'
 import { updateListing, updateListingSchema } from '~/server/update_listing'
+import { analyzeListing } from '~/server/analyze_listing'
+import { Progress } from '~/components/ui/progress'
 
 // Define the listing type
 interface Listing {
@@ -51,6 +54,7 @@ function ListingDetailsPage() {
   // Use React Query for data fetching instead of manual state management
   const fetchListingFn = useServerFn(fetchListing)
   const updateListingFn = useServerFn(updateListing)
+  const analyzeListingFn = useServerFn(analyzeListing)
 
   // Use React Query to fetch the listing data
   const {
@@ -157,6 +161,103 @@ function ListingDetailsPage() {
     updateListingMutation.mutate({ data: updateData })
   }
 
+  // Analysis mutation using React Query's useMutation
+  const analyzeListingMutation = useMutation({
+    mutationFn: () => {
+      // Make sure we have a listing
+      if (!listing) {
+        throw new Error('No listing data available')
+      }
+
+      // Structure the data correctly for analyze_listing.ts
+      return analyzeListingFn({
+        data: {
+          asin: listing.asins?.[0] || '', // Use the first ASIN if available
+          productData: {
+            title: listing.title,
+            description: listing.description,
+            bulletPoints: listing.bullet_points,
+          },
+        },
+      })
+    },
+    onSuccess: (result) => {
+      toast.success('Listing analyzed successfully')
+    },
+    onError: (error) => {
+      toast.error('Failed to analyze listing', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+      })
+    },
+  })
+
+  // Handle analyzing the listing
+  const handleAnalyzeListing = () => {
+    analyzeListingMutation.mutate()
+  }
+
+  // Handle applying optimized content
+  const handleApplyOptimizedContent = () => {
+    if (!analyzeListingMutation.data?.success || !analyzeListingMutation.data.analysis) {
+      return
+    }
+
+    const analysis = analyzeListingMutation.data.analysis
+
+    // Update the form state with optimized content
+    setTitle(analysis.optimizedTitle || analysis.title)
+    setDescription(analysis.description)
+    setBulletPoints(analysis.bullet_points)
+
+    // Switch to the content tab and enable editing
+    setIsEditing(true)
+
+    // You might want to add a way to programmatically switch to the content tab
+    // This depends on how your Tabs component works
+
+    toast.success('Optimized content applied', {
+      description: 'Review and save the changes to update your listing.',
+    })
+  }
+
+  // Add this helper function
+  const getScoreBadgeVariant = (score: number) => {
+    if (score >= 8) return 'success'
+    if (score >= 6) return 'warning'
+    return 'destructive'
+  }
+
+  // First, add these missing variables and functions
+  const [simulatedProgress, setSimulatedProgress] = useState(0)
+
+  // Add this function to get analysis status message
+  const getAnalysisStatusMessage = () => {
+    if (simulatedProgress < 30) return 'Examining keywords and title structure...'
+    if (simulatedProgress < 60) return 'Analyzing product bullets and description...'
+    if (simulatedProgress < 85) return 'Evaluating competitor differentiation...'
+    return 'Finalizing analysis and preparing recommendations...'
+  }
+
+  // Add this effect to simulate progress when analyzing
+  useEffect(() => {
+    if (analyzeListingMutation.isPending) {
+      setSimulatedProgress(0)
+      const interval = setInterval(() => {
+        setSimulatedProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(interval)
+            return prev
+          }
+          return prev + 5
+        })
+      }, 500)
+
+      return () => clearInterval(interval)
+    } else {
+      setSimulatedProgress(100)
+    }
+  }, [analyzeListingMutation.isPending])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[70vh]">
@@ -177,8 +278,10 @@ function ListingDetailsPage() {
     )
   }
 
+  console.log(analyzeListingMutation.data)
+
   return (
-    <div className="container mx-auto py-6 max-w-5xl">
+    <div className="container mx-auto p-6 max-w-7xl">
       {/* Header with actions */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -256,132 +359,265 @@ function ListingDetailsPage() {
         </Card>
       </div>
 
-      {/* Main content tabs */}
-      <Tabs defaultValue="content" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="content">Listing Content</TabsTrigger>
-          <TabsTrigger value="keywords">Keywords</TabsTrigger>
-        </TabsList>
+      {/* New grid layout with main content and analysis side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main content tabs - takes 2/3 of the width on large screens */}
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="content" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="content">Listing Content</TabsTrigger>
+              <TabsTrigger value="keywords">Keywords</TabsTrigger>
+            </TabsList>
 
-        {/* Content Tab */}
-        <TabsContent value="content">
-          <Card>
-            <CardHeader>
-              <CardTitle>Listing Content</CardTitle>
-              <CardDescription>
-                {isEditing
-                  ? 'Edit your listing content below. All fields are required.'
-                  : 'View your current listing content. Click Edit to make changes.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Title */}
-              <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-medium">
-                  Title
-                </label>
-                {isEditing ? (
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter product title"
-                  />
-                ) : (
-                  <div className="p-3 bg-muted/30 rounded-md">
-                    <p className="text-lg font-medium">{title}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Bullet Points */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Bullet Points</label>
-                {isEditing ? (
+            {/* Content Tab */}
+            <TabsContent value="content">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Listing Content</CardTitle>
+                  <CardDescription>
+                    {isEditing
+                      ? 'Edit your listing content below. All fields are required.'
+                      : 'View your current listing content. Click Edit to make changes.'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Title */}
                   <div className="space-y-2">
-                    {bulletPoints.map((bullet, index) => (
+                    <label htmlFor="title" className="text-sm font-medium">
+                      Title
+                    </label>
+                    {isEditing ? (
                       <Input
-                        key={index}
-                        value={bullet}
-                        onChange={(e) => handleBulletPointChange(index, e.target.value)}
-                        placeholder={`Bullet point ${index + 1}`}
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Enter product title"
                       />
-                    ))}
+                    ) : (
+                      <div className="p-3 bg-muted/30 rounded-md">
+                        <p className="text-lg font-medium">{title}</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="p-3 bg-muted/30 rounded-md">
-                    <ul className="list-disc pl-5 space-y-2">
-                      {(listing.bullet_points || []).map((bullet: string, index: number) => (
-                        <li key={index}>{bullet}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
 
-              {/* Description */}
-              <div className="space-y-2">
-                <label htmlFor="description" className="text-sm font-medium">
-                  Description
-                </label>
-                {isEditing ? (
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Enter product description"
-                    rows={6}
-                  />
-                ) : (
-                  <div className="p-3 bg-muted/30 rounded-md">
-                    <p className="whitespace-pre-line">{description}</p>
+                  {/* Bullet Points */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Bullet Points</label>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        {bulletPoints.map((bullet, index) => (
+                          <Input
+                            key={index}
+                            value={bullet}
+                            onChange={(e) => handleBulletPointChange(index, e.target.value)}
+                            placeholder={`Bullet point ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-muted/30 rounded-md">
+                        <ul className="list-disc pl-5 space-y-2">
+                          {(listing.bullet_points || []).map((bullet: string, index: number) => (
+                            <li key={index}>{bullet}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Keywords Tab */}
-        <TabsContent value="keywords">
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <label htmlFor="description" className="text-sm font-medium">
+                      Description
+                    </label>
+                    {isEditing ? (
+                      <Textarea
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Enter product description"
+                        rows={6}
+                      />
+                    ) : (
+                      <div className="p-3 bg-muted/30 rounded-md">
+                        <p className="whitespace-pre-line">{description}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Keywords Tab */}
+            <TabsContent value="keywords">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Tag className="h-5 w-5 mr-2" />
+                    Keywords
+                  </CardTitle>
+                  <CardDescription>These keywords are used to optimize your listing for Amazon search.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Keywords stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-muted/40 rounded p-3">
+                      <p className="text-sm font-medium">Total Keywords</p>
+                      <p className="text-2xl font-bold">{keywords.length}</p>
+                    </div>
+                    <div className="bg-muted/40 rounded p-3">
+                      <p className="text-sm font-medium">Selected</p>
+                      <p className="text-2xl font-bold">{selectedKeywords.length}</p>
+                    </div>
+                    <div className="bg-muted/40 rounded p-3">
+                      <p className="text-sm font-medium">From ASINs</p>
+                      <p className="text-2xl font-bold">{(listing.asins || []).length}</p>
+                    </div>
+                  </div>
+
+                  {/* Keywords list */}
+                  <div className="h-[400px] overflow-y-auto pr-2">
+                    <KeywordsList
+                      keywords={keywords}
+                      onToggle={toggleKeyword}
+                      onRemove={removeKeyword}
+                      asins={listing.asins || []}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Analysis section - takes 1/3 of the width on large screens */}
+        <div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Tag className="h-5 w-5 mr-2" />
-                Keywords
+                <Brain className="h-5 w-5 mr-2" />
+                Listing Analysis
               </CardTitle>
-              <CardDescription>These keywords are used to optimize your listing for Amazon search.</CardDescription>
+              <CardDescription>Analyze your listing to get optimization recommendations and insights.</CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Keywords stats */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-muted/40 rounded p-3">
-                  <p className="text-sm font-medium">Total Keywords</p>
-                  <p className="text-2xl font-bold">{keywords.length}</p>
-                </div>
-                <div className="bg-muted/40 rounded p-3">
-                  <p className="text-sm font-medium">Selected</p>
-                  <p className="text-2xl font-bold">{selectedKeywords.length}</p>
-                </div>
-                <div className="bg-muted/40 rounded p-3">
-                  <p className="text-sm font-medium">From ASINs</p>
-                  <p className="text-2xl font-bold">{(listing.asins || []).length}</p>
-                </div>
-              </div>
+              {/* Analysis state management */}
+              {analyzeListingMutation.isPending ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Analyzing your product...
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Progress value={simulatedProgress} className="mb-3" />
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      <Brain className="h-4 w-4 text-primary" />
+                      <p className="text-muted-foreground font-medium">{getAnalysisStatusMessage()}</p>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Our AI is examining your listing against industry best practices. This may take up to a minute.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : analyzeListingMutation.data?.success && analyzeListingMutation.data.analysis ? (
+                <>
+                  {/* Overall Score */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Overall Listing Score</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-2xl font-bold">
+                          {analyzeListingMutation.data.analysis.overall_score.toFixed(1)}/10
+                        </h3>
+                        <Badge variant={getScoreBadgeVariant(analyzeListingMutation.data.analysis.overall_score)}>
+                          {analyzeListingMutation.data.analysis.overall_score >= 8
+                            ? 'Excellent'
+                            : analyzeListingMutation.data.analysis.overall_score >= 6
+                              ? 'Good'
+                              : 'Needs Improvement'}
+                        </Badge>
+                      </div>
+                      <Progress value={analyzeListingMutation.data.analysis.overall_score * 10} />
+                    </CardContent>
+                  </Card>
 
-              {/* Keywords list */}
-              <div className="h-[400px] overflow-y-auto pr-2">
-                <KeywordsList
-                  keywords={keywords}
-                  onToggle={toggleKeyword}
-                  onRemove={removeKeyword}
-                  asins={listing.asins || []}
-                />
-              </div>
+                  {/* Category Scores */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Analysis by Category</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Accordion type="single" collapsible>
+                        {Object.entries(analyzeListingMutation.data.analysis)
+                          .filter(([key]) => key !== 'overall_score')
+                          .map(([category, data]) => (
+                            <AccordionItem key={category} value={category}>
+                              <AccordionTrigger>
+                                <div className="flex justify-between items-center w-full pr-4">
+                                  <span className="capitalize">{category.replace(/_/g, ' ')}</span>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={getScoreBadgeVariant((data as any).score)}>
+                                      {(data as any).score}/10
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="space-y-4 pt-2">
+                                  <div>
+                                    <h4 className="font-semibold text-green-600 dark:text-green-400">Strengths</h4>
+                                    <p>{(data as any).pros}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-red-600 dark:text-red-400">
+                                      Areas for Improvement
+                                    </h4>
+                                    <p>{(data as any).cons}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-blue-600 dark:text-blue-400">Recommendations</h4>
+                                    <p>{(data as any).recommendations}</p>
+                                  </div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                      </Accordion>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                // Empty state with analyze button
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Brain className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No analysis yet</h3>
+                  <p className="text-muted-foreground text-center mb-6 max-w-md">
+                    Analyze your listing to get optimization recommendations and insights based on Amazon best
+                    practices.
+                  </p>
+                  <Button onClick={handleAnalyzeListing} disabled={analyzeListingMutation.isPending}>
+                    {analyzeListingMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="mr-2 h-4 w-4" />
+                        Analyze Listing
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   )
 }
