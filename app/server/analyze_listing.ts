@@ -23,23 +23,23 @@ export const analyzeListing = createServerFn()
       })
       .parse(d),
   )
-  .handler(async ({ data: { asin, productData } }) => {
+  .handler(async ({ data }) => {
     try {
       // If product data wasn't provided, fetch it
-      const listingData = productData || (await fetchAmazonProductData(asin))
+      const listingData = data.productData || (await fetchAmazonProductData(data.asin))
 
       // Check for mock analysis data if enabled
-      if (USE_MOCK_DATA && mockAnalyses[asin]) {
-        console.log('Using mock analysis data for', asin)
+      if (USE_MOCK_DATA && mockAnalyses[data.asin]) {
+        console.log('Using mock analysis data for', data.asin)
         return {
           success: true,
           listingData,
-          analysis: mockAnalyses[asin],
+          analysis: mockAnalyses[data.asin],
         }
       }
 
       // Otherwise, proceed with real API call
-      console.log('Making real API call to Claude for ASIN:', asin)
+      console.log('Making real API call to Claude for ASIN:', data.asin)
 
       // Prepare the prompt with explicit format instructions
       const prompt = `

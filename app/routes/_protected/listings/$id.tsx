@@ -13,12 +13,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '~/components/ui/button'
 import { KeywordsList } from '~/components/KeywordsList'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '~/components/ui/accordion'
+import { Progress } from '~/components/ui/progress'
 
 // Import server functions from server folder
 import { fetchListing } from '~/server/fetch_listing'
 import { updateListing, updateListingSchema } from '~/server/update_listing'
 import { analyzeListing } from '~/server/analyze_listing'
-import { Progress } from '~/components/ui/progress'
+import { fetchAnalysis, saveAnalysis } from '~/server/analysis_storage'
 
 // Define the listing type
 interface Listing {
@@ -55,6 +56,8 @@ function ListingDetailsPage() {
   const fetchListingFn = useServerFn(fetchListing)
   const updateListingFn = useServerFn(updateListing)
   const analyzeListingFn = useServerFn(analyzeListing)
+  const fetchAnalysisFn = useServerFn(fetchAnalysis)
+  const saveAnalysisFn = useServerFn(saveAnalysis)
 
   // Use React Query to fetch the listing data
   const {
@@ -67,6 +70,28 @@ function ListingDetailsPage() {
     queryFn: () => fetchListingFn({ data: { id } }),
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 1,
+  })
+
+  // Update the query to check for existing analysis
+  const { data: existingAnalysis, isLoading: isLoadingAnalysis } = useQuery({
+    queryKey: ['listing-analysis', id, listing?.version_id],
+    queryFn: () => {
+      // Make sure we have the required data before making the query
+      if (!id || !listing?.version_id) {
+        return Promise.resolve({ success: false, exists: false })
+      }
+
+      // Make sure we're passing the data in the correct structure
+      return fetchAnalysisFn({
+        data: {
+          listing_id: Number(id),
+          version_id: listing.version_id,
+        },
+      })
+    },
+    // Only enable the query when we have both id and version_id
+    enabled: !!id && !!listing?.version_id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
   // Handle error with useEffect instead
@@ -161,6 +186,9 @@ function ListingDetailsPage() {
     updateListingMutation.mutate({ data: updateData })
   }
 
+  // Add a separate state for the analysis data
+  const [analysisData, setAnalysisData] = useState<any>(null)
+
   // Analysis mutation using React Query's useMutation
   const analyzeListingMutation = useMutation({
     mutationFn: () => {
@@ -181,8 +209,31 @@ function ListingDetailsPage() {
         },
       })
     },
-    onSuccess: (result) => {
-      toast.success('Listing analyzed successfully')
+    onSuccess: async (result) => {
+      // Save the analysis to the database
+      if (result.success && result.analysis && listing) {
+        try {
+          await saveAnalysisFn({
+            data: {
+              listing_id: listing.id,
+              version_id: listing.version_id,
+              analysis_data: result.analysis,
+            },
+          })
+
+          toast.success('Listing analyzed and saved successfully')
+        } catch (error) {
+          console.error('Failed to save analysis:', error)
+          toast.error('Analysis completed but failed to save')
+        }
+      } else {
+        toast.success('Listing analyzed successfully')
+      }
+
+      // Update our state
+      if (result.analysis) {
+        setAnalysisData(result.analysis)
+      }
     },
     onError: (error) => {
       toast.error('Failed to analyze listing', {
@@ -197,29 +248,6 @@ function ListingDetailsPage() {
   }
 
   // Handle applying optimized content
-  const handleApplyOptimizedContent = () => {
-    if (!analyzeListingMutation.data?.success || !analyzeListingMutation.data.analysis) {
-      return
-    }
-
-    const analysis = analyzeListingMutation.data.analysis
-
-    // Update the form state with optimized content
-    setTitle(analysis.optimizedTitle || analysis.title)
-    setDescription(analysis.description)
-    setBulletPoints(analysis.bullet_points)
-
-    // Switch to the content tab and enable editing
-    setIsEditing(true)
-
-    // You might want to add a way to programmatically switch to the content tab
-    // This depends on how your Tabs component works
-
-    toast.success('Optimized content applied', {
-      description: 'Review and save the changes to update your listing.',
-    })
-  }
-
   // Add this helper function
   const getScoreBadgeVariant = (score: number) => {
     if (score >= 8) return 'success'
@@ -258,6 +286,20 @@ function ListingDetailsPage() {
     }
   }, [analyzeListingMutation.isPending])
 
+  // Update the handleLoadAnalysis function with a more specific type assertion
+  const handleLoadAnalysis = () => {
+    // Type guard to check if analysis exists
+    if (!existingAnalysis || !existingAnalysis.exists || !('analysis' in existingAnalysis)) {
+      return
+    }
+
+    // Type assertion for the analysis structure
+    const analysisObj = existingAnalysis.analysis as { analysis_data: Record<string, any> }
+
+    // Now TypeScript knows the structure
+    setAnalysisData(analysisObj.analysis_data)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[70vh]">
@@ -277,8 +319,6 @@ function ListingDetailsPage() {
       </div>
     )
   }
-
-  console.log(analyzeListingMutation.data)
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
@@ -521,7 +561,7 @@ function ListingDetailsPage() {
                     </p>
                   </CardContent>
                 </Card>
-              ) : analyzeListingMutation.data?.success && analyzeListingMutation.data.analysis ? (
+              ) : analysisData ? (
                 <>
                   {/* Overall Score */}
                   <Card>
@@ -530,20 +570,19 @@ function ListingDetailsPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-2xl font-bold">
-                          {analyzeListingMutation.data.analysis.overall_score.toFixed(1)}/10
-                        </h3>
-                        <Badge variant={getScoreBadgeVariant(analyzeListingMutation.data.analysis.overall_score)}>
-                          {analyzeListingMutation.data.analysis.overall_score >= 8
+                        <h3 className="text-2xl font-bold">{analysisData.overall_score.toFixed(1)}/10</h3>
+                        <Badge variant={getScoreBadgeVariant(analysisData.overall_score)}>
+                          {analysisData.overall_score >= 8
                             ? 'Excellent'
-                            : analyzeListingMutation.data.analysis.overall_score >= 6
+                            : analysisData.overall_score >= 6
                               ? 'Good'
                               : 'Needs Improvement'}
                         </Badge>
                       </div>
-                      <Progress value={analyzeListingMutation.data.analysis.overall_score * 10} />
+                      <Progress value={analysisData.overall_score * 10} />
                     </CardContent>
                   </Card>
+                  <br />
 
                   {/* Category Scores */}
                   <Card>
@@ -552,7 +591,7 @@ function ListingDetailsPage() {
                     </CardHeader>
                     <CardContent>
                       <Accordion type="single" collapsible>
-                        {Object.entries(analyzeListingMutation.data.analysis)
+                        {Object.entries(analysisData)
                           .filter(([key]) => key !== 'overall_score')
                           .map(([category, data]) => (
                             <AccordionItem key={category} value={category}>
@@ -594,24 +633,51 @@ function ListingDetailsPage() {
                 // Empty state with analyze button
                 <div className="flex flex-col items-center justify-center py-12">
                   <Brain className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No analysis yet</h3>
-                  <p className="text-muted-foreground text-center mb-6 max-w-md">
-                    Analyze your listing to get optimization recommendations and insights based on Amazon best
-                    practices.
-                  </p>
-                  <Button onClick={handleAnalyzeListing} disabled={analyzeListingMutation.isPending}>
-                    {analyzeListingMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="mr-2 h-4 w-4" />
-                        Analyze Listing
-                      </>
-                    )}
-                  </Button>
+
+                  {existingAnalysis?.exists ? (
+                    // Analysis exists but isn't loaded yet
+                    <>
+                      <h3 className="text-lg font-medium mb-2">Analysis Available</h3>
+                      <p className="text-muted-foreground text-center mb-6 max-w-md">
+                        This listing version has already been analyzed. Click below to view the analysis.
+                      </p>
+                      <Button onClick={handleLoadAnalysis} disabled={isLoadingAnalysis}>
+                        {isLoadingAnalysis ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <Brain className="mr-2 h-4 w-4" />
+                            View Analysis
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    // No analysis exists yet
+                    <>
+                      <h3 className="text-lg font-medium mb-2">No analysis yet</h3>
+                      <p className="text-muted-foreground text-center mb-6 max-w-md">
+                        Analyze your listing to get optimization recommendations and insights based on Amazon best
+                        practices.
+                      </p>
+                      <Button onClick={handleAnalyzeListing} disabled={analyzeListingMutation.isPending}>
+                        {analyzeListingMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Brain className="mr-2 h-4 w-4" />
+                            Analyze Listing
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
