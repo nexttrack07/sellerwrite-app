@@ -412,6 +412,36 @@ function KeywordsStep() {
           </div>
         </div>
 
+        {/* Add keyword information note */}
+        <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 mt-0.5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-5 h-5 text-blue-600 dark:text-blue-400"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">About These Keywords</h4>
+              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                The extracted keywords include <strong>long-tail variations</strong> (more specific, multi-word phrases)
+                that cover both broad and phrase match keyword types. Using these specific variations in your listing
+                can help capture targeted search traffic while maintaining relevance to your product.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Add new keyword */}
         <div className="flex space-x-2">
           <Input
@@ -436,25 +466,31 @@ function KeywordsStep() {
           </div>
         </div>
 
-        {/* Keywords list */}
-        {keywordsLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredKeywords.length > 0 ? (
-          <KeywordsList
-            keywords={filteredKeywords}
-            onToggle={toggleKeywordSelection}
-            onRemove={removeKeyword}
-            asins={asins}
-          />
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            {keywords.length > 0
-              ? 'No keywords match your search'
-              : 'No keywords extracted yet. Add ASINs in the previous step.'}
-          </div>
-        )}
+        {/* Keywords list - Make it fixed height and scrollable */}
+        <div className="relative">
+          {keywordsLoading ? (
+            <div className="flex items-center justify-center h-[400px]">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredKeywords.length > 0 ? (
+            <div className="h-[400px] overflow-y-auto pr-2">
+              <KeywordsList
+                keywords={filteredKeywords}
+                onToggle={toggleKeywordSelection}
+                onRemove={removeKeyword}
+                asins={asins}
+              />
+            </div>
+          ) : (
+            <div className="text-center py-8 h-[400px] flex items-center justify-center">
+              <div className="text-muted-foreground">
+                {keywords.length > 0
+                  ? 'No keywords match your search'
+                  : 'No keywords extracted yet. Add ASINs in the previous step.'}
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

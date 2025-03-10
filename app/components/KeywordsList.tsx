@@ -53,7 +53,7 @@ export function KeywordsList({ keywords, onToggle, onRemove, asins }: KeywordsLi
     .map((group) => group[0]) // Take the first keyword from each group for display
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {sortedKeywords.map((keyword) => {
         const group = keywordsByText[keyword.text.toLowerCase()]
         const sources = new Set(group.map((k) => k.sourceAsin).filter(Boolean) as string[])
@@ -62,51 +62,51 @@ export function KeywordsList({ keywords, onToggle, onRemove, asins }: KeywordsLi
         return (
           <div
             key={keyword.id}
-            className={`flex items-center justify-between p-3 border rounded-md ${
+            className={`flex items-center justify-between p-2 border rounded-md ${
               keyword.selected ? 'border-primary/30 bg-primary/5' : 'border-muted-foreground/20'
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Checkbox
                 checked={keyword.selected}
                 onCheckedChange={() => onToggle(keyword.id)}
                 id={`keyword-${keyword.id}`}
               />
               <div>
-                <label htmlFor={`keyword-${keyword.id}`} className="font-medium cursor-pointer">
+                <label htmlFor={`keyword-${keyword.id}`} className="font-medium cursor-pointer text-sm">
                   {keyword.text}
                 </label>
 
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  {/* Source information */}
+                <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                  {/* Source information - more compact */}
                   {isMultiSource ? (
-                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Badge variant="outline" className="text-xs flex items-center gap-1 py-0 h-5">
                       <Tag className="h-3 w-3" />
-                      Found in {sources.size} ASINs
+                      <span className="text-xs">{sources.size} ASINs</span>
                     </Badge>
                   ) : keyword.sourceAsin ? (
-                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Badge variant="outline" className="text-xs flex items-center gap-1 py-0 h-5">
                       <Tag className="h-3 w-3" />
-                      {keyword.sourceAsin}
+                      <span className="text-xs truncate max-w-[80px]">{keyword.sourceAsin}</span>
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs py-0 h-5">
                       Custom
                     </Badge>
                   )}
 
-                  {/* Metrics if available */}
+                  {/* Metrics if available - more compact */}
                   {keyword.searchVolume && (
-                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Badge variant="outline" className="text-xs flex items-center gap-1 py-0 h-5">
                       <TrendingUp className="h-3 w-3" />
-                      {keyword.searchVolume}
+                      <span className="text-xs">{keyword.searchVolume}</span>
                     </Badge>
                   )}
 
                   {keyword.competition && (
-                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Badge variant="outline" className="text-xs flex items-center gap-1 py-0 h-5">
                       <Users className="h-3 w-3" />
-                      {keyword.competition}
+                      <span className="text-xs">{keyword.competition}</span>
                     </Badge>
                   )}
                 </div>
@@ -117,7 +117,7 @@ export function KeywordsList({ keywords, onToggle, onRemove, asins }: KeywordsLi
               variant="ghost"
               size="sm"
               onClick={() => onRemove(keyword.id)}
-              className="text-muted-foreground hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
             >
               <X className="h-4 w-4" />
             </Button>
