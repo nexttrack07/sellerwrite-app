@@ -78,7 +78,6 @@ export const fetchAnalysis = createServerFn({
   method: 'POST',
 })
   .validator((input: unknown) => {
-    console.log('input', input)
     return z
       .object({
         listing_id: z.number(),
@@ -89,7 +88,6 @@ export const fetchAnalysis = createServerFn({
   .handler(async ({ data }): Promise<{ success: boolean; exists: boolean; error: string | null; analysis: any }> => {
     const supabase = await getSupabaseServerClient()
 
-    console.log('data', data)
     // Add additional validation
     if (!data.listing_id || !data.version_id) {
       return {
@@ -110,8 +108,6 @@ export const fetchAnalysis = createServerFn({
       // Limit to just one row
       .limit(1)
       .maybeSingle() // Use maybeSingle instead of single
-
-    console.log('error', error)
 
     if (error) {
       if (error.code === 'PGRST116') {
