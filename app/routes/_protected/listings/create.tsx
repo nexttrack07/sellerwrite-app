@@ -13,7 +13,7 @@ import { ListingDetails } from '~/components/ListingDetails'
 import { Stepper, type StepItem } from '~/components/Stepper'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import { ArrowLeft, ArrowRight, Loader2, X, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, X, Search, Hash } from 'lucide-react'
 import { useListingStore } from '~/store/listingStore'
 import { KeywordsList } from '~/components/KeywordsList'
 import { RadioCardGroup, RadioCardOption } from '~/components/ui/radio-card-group'
@@ -111,10 +111,6 @@ const createListingSteps: StepItem[] = [
     title: 'Generate',
     description: 'Create your listing draft',
   },
-  {
-    title: 'Review',
-    description: 'Review and make edits',
-  },
 ]
 
 // Define the copywriting style options
@@ -148,6 +144,28 @@ const copywritingStyles: RadioCardOption[] = [
     title: 'Lifestyle-Oriented',
     description: 'Connects the product to specific activities, interests, or identity of the target audience.',
     icon: <Compass className="h-4 w-4" />,
+  },
+]
+
+// Define keyword density options
+const keywordDensityOptions: RadioCardOption[] = [
+  {
+    id: 'low',
+    title: 'Low',
+    description: 'Subtle keyword usage for natural flow',
+    icon: <Hash className="h-4 w-4" />,
+  },
+  {
+    id: 'medium',
+    title: 'Medium',
+    description: 'Balanced keyword usage',
+    icon: <Hash className="h-4 w-4" />,
+  },
+  {
+    id: 'high',
+    title: 'High',
+    description: 'Maximum keyword optimization',
+    icon: <Hash className="h-4 w-4" />,
   },
 ]
 
@@ -227,8 +245,6 @@ function CreateListingPage() {
         return <StyleSelectionStep />
       case 4:
         return <GenerationStep />
-      case 5:
-        return <ReviewStep />
       default:
         return null
     }
@@ -721,35 +737,84 @@ function StyleSelectionStep() {
 }
 
 function GenerationStep() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Generate Listing</CardTitle>
-        <CardDescription>
-          We'll now generate your Amazon listing based on the keywords and style you've selected.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">Generation UI with progress indicator would go here</p>
-      </CardContent>
-    </Card>
-  )
-}
+  // Add state for keyword density settings
+  const [titleDensity, setTitleDensity] = useState('medium')
+  const [bulletsDensity, setBulletsDensity] = useState('medium')
+  const [descriptionDensity, setDescriptionDensity] = useState('medium')
 
-function ReviewStep() {
+  // Get the generate function from the store
+  const { generateListing, contentLoading } = useListingStore()
+
+  // Handle generation with density settings
+  const handleGenerate = () => {
+    generateListing({
+      keywordDensity: {
+        title: titleDensity,
+        bullets: bulletsDensity,
+        description: descriptionDensity,
+      },
+    })
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Review Your Listing</CardTitle>
-        <CardDescription>
-          Review the generated listing content and make any final edits before exporting.
-        </CardDescription>
+        <CardTitle>Generate Listing Content</CardTitle>
+        <CardDescription>Configure keyword density and generate your listing content</CardDescription>
       </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">Listing preview and editing UI would go here</p>
+      <CardContent className="space-y-6">
+        {/* Title Keyword Density */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Title Keyword Density</h3>
+          <p className="text-sm text-muted-foreground mb-3">Control how many keywords appear in your product title</p>
+          <RadioCardGroup
+            options={keywordDensityOptions}
+            value={titleDensity}
+            onChange={setTitleDensity}
+            className="grid-cols-3 gap-2"
+            size="small"
+          />
+        </div>
+
+        {/* Bullet Points Keyword Density */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Bullet Points Keyword Density</h3>
+          <p className="text-sm text-muted-foreground mb-3">Control how many keywords appear in your bullet points</p>
+          <RadioCardGroup
+            options={keywordDensityOptions}
+            value={bulletsDensity}
+            onChange={setBulletsDensity}
+            className="grid-cols-3 gap-2"
+            size="small"
+          />
+        </div>
+
+        {/* Description Keyword Density */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Description Keyword Density</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Control how many keywords appear in your product description
+          </p>
+          <RadioCardGroup
+            options={keywordDensityOptions}
+            value={descriptionDensity}
+            onChange={setDescriptionDensity}
+            className="grid-cols-3 gap-2"
+            size="small"
+          />
+        </div>
       </CardContent>
-      <CardFooter>
-        <Button className="ml-auto">Export Listing</Button>
+      <CardFooter className="flex justify-center pt-6">
+        <Button size="lg" className="w-full max-w-md" onClick={handleGenerate} disabled={contentLoading}>
+          {contentLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>Generate Listing Content</>
+          )}
+        </Button>
       </CardFooter>
     </Card>
   )
