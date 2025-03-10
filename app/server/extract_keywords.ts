@@ -82,40 +82,22 @@ Format your response as a JSON array of keyword objects with the following struc
       const jsonText = (message.content[0] as any).text
       const cleanedJson = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '')
       const keywordsData = JSON.parse(cleanedJson)
+      console.log('keywordsData', keywordsData)
 
       // Add this function to filter out any remaining brand terms
-      function filterBrandTerms(keywords: Array<{ keyword: string; [key: string]: any }>, brandTerms: string[] = []) {
-        // Extract potential brand name from the title (usually the first word or two)
-        // This is a simple heuristic and might need refinement
+      function filterBrandTerms(
+        keywords: { keyword: string }[],
+        brandTerms: string[] | undefined,
+      ): { keyword: string }[] {
+        // Add a null check to handle undefined brandTerms
+        if (!brandTerms || !Array.isArray(brandTerms)) {
+          return keywords // Return original keywords if no brand terms to filter
+        }
 
-        // Default list of terms to filter out
-        const defaultFilters = [
-          'amazon',
-          'bestseller',
-          'best seller',
-          'premium',
-          'exclusive',
-          'official',
-          'authentic',
-          'genuine',
-          'original',
-          'patented',
-          'proprietary',
-          'trademarked',
-          'registered',
-          'tm',
-          '™',
-          '®',
-          '©',
-        ]
-
-        const allFilters = [...defaultFilters, ...brandTerms].map((term) => term.toLowerCase())
-
-        return keywords.filter((keywordObj) => {
-          const keyword = keywordObj.keyword.toLowerCase()
-
-          // Check if the keyword contains any filtered terms
-          return !allFilters.some((filter) => keyword.includes(filter))
+        // Now we can safely use filter since we've verified brandTerms exists
+        return keywords.filter((keyword) => {
+          // Check if any brand term is contained in the keyword
+          return !brandTerms.some((brand) => keyword.keyword.toLowerCase().includes(brand.toLowerCase()))
         })
       }
 
@@ -127,7 +109,7 @@ Format your response as a JSON array of keyword objects with the following struc
         .filter((word) => word.length > 2)
 
       // Filter out brand terms
-      const filteredKeywords = filterBrandTerms(keywordsData.keywords, potentialBrands)
+      const filteredKeywords = filterBrandTerms(keywordsData, potentialBrands)
 
       return {
         success: true,
