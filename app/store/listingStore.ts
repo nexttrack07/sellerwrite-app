@@ -28,6 +28,14 @@ interface ListingContent {
   bulletPoints: string[]
 }
 
+interface ProductDetails {
+  productType: string
+  category: string
+  uniqueFeatures: string
+  keyFeatures: string
+  targetAudience: string
+}
+
 interface ListingState {
   // ASINs and product data
   asins: string[]
@@ -50,6 +58,9 @@ interface ListingState {
   // Current step in the process
   currentStep: number
 
+  // Product details
+  productDetails: ProductDetails
+
   // Actions - will be implemented below
   // ASIN actions
   addAsin: (asin: string) => Promise<void>
@@ -70,6 +81,9 @@ interface ListingState {
 
   // Navigation
   setCurrentStep: (step: number) => void
+
+  // Product details actions
+  setProductDetails: (details: ProductDetails) => void
 }
 
 // Define the expected input/output types for your API functions
@@ -126,6 +140,15 @@ export const useListingStore = create<ListingState>()(
         contentLoading: false,
 
         currentStep: 0,
+
+        // Product details
+        productDetails: {
+          productType: '',
+          category: '',
+          uniqueFeatures: '',
+          keyFeatures: '',
+          targetAudience: '',
+        },
 
         // Implementation of all the actions will go here
         // ASIN actions
@@ -380,6 +403,9 @@ export const useListingStore = create<ListingState>()(
         setCurrentStep: (step) => {
           set({ currentStep: step })
         },
+
+        // Product details actions
+        setProductDetails: (details) => set({ productDetails: details }),
       }),
       {
         name: 'listing-store',
@@ -391,6 +417,7 @@ export const useListingStore = create<ListingState>()(
           listingTone: state.listingTone,
           generatedContent: state.generatedContent,
           currentStep: state.currentStep,
+          productDetails: state.productDetails,
         }),
       },
     ),

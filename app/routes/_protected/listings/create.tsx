@@ -90,6 +90,10 @@ export const Route = createFileRoute('/_protected/listings/create')({
 // Define the steps for listing creation
 const createListingSteps: StepItem[] = [
   {
+    title: 'Product Details',
+    description: 'Describe your product',
+  },
+  {
     title: 'Add ASIN(s)',
     description: 'Extract keywords from product',
   },
@@ -134,6 +138,8 @@ function CreateListingPage() {
     setListingTone,
     generateListing,
     updateGeneratedContent,
+    productDetails,
+    setProductDetails,
   } = useListingStore()
 
   const [formData, setFormData] = useState<CreateCombinedInput>({
@@ -176,14 +182,16 @@ function CreateListingPage() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        return <ASINInputStep />
+        return <ProductDetailsStep />
       case 1:
-        return <KeywordsStep />
+        return <ASINInputStep />
       case 2:
-        return <StyleSelectionStep />
+        return <KeywordsStep />
       case 3:
-        return <GenerationStep />
+        return <StyleSelectionStep />
       case 4:
+        return <GenerationStep />
+      case 5:
         return <ReviewStep />
       default:
         return null
@@ -253,6 +261,126 @@ function CreateListingPage() {
 }
 
 // Placeholder components for each step
+function ProductDetailsStep() {
+  const { productDetails, setProductDetails } = useListingStore()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setProductDetails({ ...productDetails, [name]: value })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Describe Your Product</CardTitle>
+        <CardDescription>
+          Help us understand your product better to create a more targeted and effective listing. This information
+          guides our AI in generating the most relevant content for your specific product.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid gap-5">
+          <div className="space-y-2">
+            <label htmlFor="productType" className="text-sm font-medium">
+              What is your product? <span className="text-muted-foreground">(required)</span>
+            </label>
+            <Input
+              id="productType"
+              name="productType"
+              placeholder="e.g., Yoga mat, Coffee maker, Wireless headphones"
+              value={productDetails.productType || ''}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="category" className="text-sm font-medium">
+              What category does your product belong to? <span className="text-muted-foreground">(required)</span>
+            </label>
+            <Input
+              id="category"
+              name="category"
+              placeholder="e.g., Fitness Equipment, Kitchen Appliances, Electronics"
+              value={productDetails.category || ''}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="uniqueFeatures" className="text-sm font-medium">
+              What unique features does your product have compared to competitors?
+            </label>
+            <Textarea
+              id="uniqueFeatures"
+              name="uniqueFeatures"
+              placeholder="Describe what makes your product stand out from similar products"
+              value={productDetails.uniqueFeatures || ''}
+              onChange={handleChange}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="keyFeatures" className="text-sm font-medium">
+              What key features should be highlighted in your listing?
+            </label>
+            <Textarea
+              id="keyFeatures"
+              name="keyFeatures"
+              placeholder="List the most important features customers should know about"
+              value={productDetails.keyFeatures || ''}
+              onChange={handleChange}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="targetAudience" className="text-sm font-medium">
+              Who is your target audience or ideal customer?
+            </label>
+            <Input
+              id="targetAudience"
+              name="targetAudience"
+              placeholder="e.g., Fitness enthusiasts, Home cooks, Professionals who travel"
+              value={productDetails.targetAudience || ''}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
+        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md p-3">
+          <div className="flex items-start gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5"
+            >
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-amber-800 dark:text-amber-300">Important</h4>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                The more specific information you provide here, the better your listing will be. These details will be
+                used alongside any ASINs you add in the next step to create a comprehensive and targeted product
+                listing.
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function ASINInputStep() {
   const { asins, asinLoadingStatus, asinErrors, addAsin, removeAsin } = useListingStore()
   const [inputValue, setInputValue] = useState('')
