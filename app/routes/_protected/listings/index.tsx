@@ -5,29 +5,60 @@ import { ProductListing, productListingSchema } from '~/types/schemas'
 import { z } from 'zod'
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PlusIcon, ClipboardListIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card } from '@/components/ui/card'
+import { ListingStackedList } from '~/components/listings/ListingStackedList'
+import { ListingWithTitle } from '~/types/listings'
 
 export const fetchListings = createServerFn({
   method: 'GET',
 }).handler(async () => {
   const supabase = await getSupabaseServerClient()
-  const { data, error } = await supabase.from('product_listings').select('*')
 
-  if (error) {
-    throw new Error(error.message)
+  // First get all listings
+  const { data: listings, error: listingsError } = await supabase
+    .from('product_listings')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (listingsError) {
+    throw new Error(listingsError.message)
   }
 
-  // Validate with Zod to ensure type safety
-  return z.array(productListingSchema).parse(
-    data.map((item) => ({
-      ...item,
-      // Ensure these are arrays of strings
-      asins: Array.isArray(item.asins) ? item.asins : [],
-      keywords: Array.isArray(item.keywords) ? item.keywords : [],
-    })),
-  )
+  // Then get all current versions
+  const currentVersionIds = listings.map((listing) => listing.current_version_id).filter((id) => id != null)
+
+  const { data: versions, error: versionsError } = await supabase
+    .from('listing_versions')
+    .select('id, title')
+    .in('id', currentVersionIds)
+
+  if (versionsError) {
+    throw new Error(versionsError.message)
+  }
+
+  // Create a map of version IDs to titles
+  const versionMap = new Map(versions.map((v) => [v.id, v.title]))
+
+  // Combine the data
+  const listingsWithTitles = listings.map((listing) => ({
+    ...listing,
+    asins: Array.isArray(listing.asins) ? listing.asins : [],
+    keywords: Array.isArray(listing.keywords) ? listing.keywords : [],
+    current_version: listing.current_version_id ? { title: versionMap.get(listing.current_version_id) || '' } : null,
+  }))
+
+  // Validate with Zod and return
+  return z
+    .array(
+      productListingSchema.extend({
+        current_version: z.object({ title: z.string() }).nullable(),
+      }),
+    )
+    .parse(listingsWithTitles) as ListingWithTitle[]
 })
 
 export const Route = createFileRoute('/_protected/listings/')({
@@ -36,7 +67,7 @@ export const Route = createFileRoute('/_protected/listings/')({
 })
 
 function ListingsComponent() {
-  const listings = Route.useLoaderData()
+  const listings = Route.useLoaderData() as ListingWithTitle[]
 
   return (
     <div className="container py-10 mx-auto">
@@ -52,7 +83,7 @@ function ListingsComponent() {
 
       {listings?.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-muted">
               <ClipboardListIcon className="h-10 w-10 opacity-50" />
             </div>
@@ -61,61 +92,11 @@ function ListingsComponent() {
             <Button asChild>
               <Link to="/listings/create">Create Listing</Link>
             </Button>
-          </CardContent>
+          </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {listings?.map((listing) => (
-            <Link
-              key={listing.id}
-              to="/listings/$id"
-              params={{ id: listing.id.toString() }}
-              className="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
-            >
-              <Card className="h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl">{listing.marketplace}</CardTitle>
-                  <Badge variant="outline">{listing.style}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Tone: {listing.tone}/10</Badge>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium leading-none mb-3">ASINs</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {listing.asins.map((asin, i) => (
-                        <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                          {asin}
-                        </Badge>
-                      ))}
-                      {listing.asins.length === 0 && <span className="text-sm text-muted-foreground">No ASINs</span>}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium leading-none mb-3">Keywords</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {listing.keywords.map((keyword, i) => (
-                        <Badge key={i} variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
-                          {keyword}
-                        </Badge>
-                      ))}
-                      {listing.keywords.length === 0 && (
-                        <span className="text-sm text-muted-foreground">No keywords</span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-end pt-0">
-                  <Button variant="outline" asChild>
-                    <Link to="/listings/$id" params={{ id: listing.id.toString() }}>
-                      View Details
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            </Link>
-          ))}
+        <div className="rounded-md border bg-card">
+          <ListingStackedList listings={listings} />
         </div>
       )}
     </div>

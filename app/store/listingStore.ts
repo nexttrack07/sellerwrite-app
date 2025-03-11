@@ -93,6 +93,9 @@ interface ListingState {
 
   // Product details actions
   setProductDetails: (details: ProductDetails) => void
+
+  // Add reset action
+  resetStore: () => void
 }
 
 // Define the expected input/output types for your API functions
@@ -157,9 +160,40 @@ export const useListingStore = create<ListingState>()(
           uniqueFeatures: '',
           keyFeatures: '',
           targetAudience: '',
+          name: '',
+          description: '',
+          keyHighlights: '',
+          competitiveAdvantage: '',
         },
 
-        // Implementation of all the actions will go here
+        // Add reset action implementation
+        resetStore: () => {
+          set({
+            asins: [],
+            asinData: {},
+            asinLoadingStatus: {},
+            asinErrors: {},
+            keywords: [],
+            keywordsLoading: false,
+            listingStyle: 'professional',
+            listingTone: 5,
+            generatedContent: null,
+            contentLoading: false,
+            currentStep: 0,
+            productDetails: {
+              productType: '',
+              category: '',
+              uniqueFeatures: '',
+              keyFeatures: '',
+              targetAudience: '',
+              name: '',
+              description: '',
+              keyHighlights: '',
+              competitiveAdvantage: '',
+            },
+          })
+        },
+
         // ASIN actions
         addAsin: async (asin) => {
           // Normalize ASIN and check if it already exists

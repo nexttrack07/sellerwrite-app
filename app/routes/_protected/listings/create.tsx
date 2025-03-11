@@ -11,6 +11,7 @@ import { KeywordsList } from '~/components/KeywordsList'
 import { RadioCardGroup, RadioCardOption } from '~/components/ui/radio-card-group'
 import { Target, Wrench, Cpu, Crown, Compass } from 'lucide-react'
 import { Stepper, type StepItem } from '~/components/Stepper'
+import { toast } from 'sonner'
 
 // Define the steps for listing creation
 const createListingSteps: StepItem[] = [
@@ -107,6 +108,11 @@ function CreateListingPage() {
     toggleKeywordSelection,
     productDetails,
     setProductDetails,
+    generateListing,
+    contentLoading,
+    resetStore,
+    listingStyle,
+    setListingStyle,
   } = useListingStore()
 
   const navigate = useNavigate()
@@ -639,24 +645,34 @@ function StyleSelectionStep() {
   )
 }
 
-function GenerationStep() {
-  // Add state for keyword density settings
+export const GenerationStep = () => {
+  const navigate = useNavigate()
+  const [isGenerating, setIsGenerating] = useState(false)
   const [titleDensity, setTitleDensity] = useState('medium')
   const [bulletsDensity, setBulletsDensity] = useState('medium')
   const [descriptionDensity, setDescriptionDensity] = useState('medium')
 
-  // Get the generate function from the store
-  const { generateListing, contentLoading } = useListingStore()
+  const { asins, keywords, listingStyle, listingTone, productDetails, generateListing, resetStore } = useListingStore()
 
-  // Handle generation with density settings
-  const handleGenerate = () => {
-    generateListing({
-      keywordDensity: {
-        title: titleDensity,
-        bullets: bulletsDensity,
-        description: descriptionDensity,
-      },
-    })
+  const handleGenerate = async () => {
+    try {
+      setIsGenerating(true)
+      const result = await generateListing({
+        keywordDensity: {
+          title: titleDensity,
+          bullets: bulletsDensity,
+          description: descriptionDensity,
+        },
+      })
+
+      // The store's generateListing function handles navigation internally
+      resetStore()
+    } catch (error) {
+      console.error('Error generating listing:', error)
+      toast.error('Failed to generate listing')
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -708,8 +724,8 @@ function GenerationStep() {
         </div>
       </CardContent>
       <CardFooter className="flex justify-center pt-6">
-        <Button size="lg" className="w-full max-w-md" onClick={handleGenerate} disabled={contentLoading}>
-          {contentLoading ? (
+        <Button size="lg" className="w-full max-w-md" onClick={handleGenerate} disabled={isGenerating}>
+          {isGenerating ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Generating...
