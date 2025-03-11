@@ -3,6 +3,7 @@ import { devtools, persist } from 'zustand/middleware'
 import { fetchProductData } from '~/server/fetch_product'
 import { extractKeywords } from '~/server/extract_keywords'
 import { Style } from '~/types/schemas'
+import { generateListing as generateListingFn } from '~/server/generate_listing'
 
 // Define types for our store
 interface ProductData {
@@ -35,6 +36,10 @@ interface ProductDetails {
   uniqueFeatures: string
   keyFeatures: string
   targetAudience: string
+  name?: string
+  description?: string
+  keyHighlights?: string
+  competitiveAdvantage?: string
 }
 
 interface ListingState {
@@ -55,6 +60,7 @@ interface ListingState {
   // Generated listing content
   generatedContent: ListingContent | null
   contentLoading: boolean
+  generatedListingId?: number
 
   // Current step in the process
   currentStep: number
@@ -77,7 +83,9 @@ interface ListingState {
   // Listing actions
   setListingStyle: (style: Style) => void
   setListingTone: (tone: number) => void
-  generateListing: () => Promise<void>
+  generateListing: (options?: {
+    keywordDensity?: { title: string; bullets: string; description: string }
+  }) => Promise<void>
   updateGeneratedContent: (content: Partial<ListingContent>) => void
 
   // Navigation
@@ -355,42 +363,61 @@ export const useListingStore = create<ListingState>()(
           set({ listingTone: tone })
         },
 
-        generateListing: async () => {
+        generateListing: async (options?: {
+          keywordDensity?: { title: string; bullets: string; description: string }
+        }) => {
           set({ contentLoading: true })
 
-          // Get the selected keywords
-          const selectedKeywords = get()
-            .keywords.filter((k) => k.selected)
-            .map((k) => k.text)
-
-          const style = get().listingStyle
-          const tone = get().listingTone
-
           try {
-            // This would be your API call to generate content
-            // For now, we'll mock it with a timeout
-            await new Promise((resolve) => setTimeout(resolve, 1500))
+            const state = get()
 
-            // Mock generated content
-            const generatedContent = {
-              title: `Professional Amazing Product with ${selectedKeywords.slice(0, 3).join(', ')}`,
-              description: `This product features ${selectedKeywords.join(', ')}. It's designed with the highest quality standards.`,
-              bulletPoints: [
-                `Premium quality with ${selectedKeywords[0] || 'great features'}`,
-                `Includes ${selectedKeywords[1] || 'amazing benefits'}`,
-                `Perfect for ${selectedKeywords[2] || 'all users'}`,
-                `Features ${selectedKeywords[3] || 'advanced technology'}`,
-                `Guaranteed ${selectedKeywords[4] || 'satisfaction'}`,
-              ],
+            // Prepare the data for the API call
+            const data = {
+              // Product details
+              productName: state.productDetails.name || '',
+              productCategory: state.productDetails.category || '',
+              productDescription: state.productDetails.description || '',
+              uniqueFeatures: state.productDetails.uniqueFeatures || '',
+              keyHighlights: state.productDetails.keyHighlights || '',
+              targetAudience: state.productDetails.targetAudience || '',
+              competitiveAdvantage: state.productDetails.competitiveAdvantage || '',
+
+              // ASINs and keywords
+              asins: state.asins,
+              keywords: state.keywords.filter((k) => k.selected).map((k) => k.text),
+
+              // Style and tone
+              style: state.listingStyle,
+              tone: state.listingTone,
+
+              // Keyword density settings (default to medium if not provided)
+              keywordDensity: options?.keywordDensity || {
+                title: 'medium',
+                bullets: 'medium',
+                description: 'medium',
+              },
             }
 
-            set({
-              generatedContent,
-              contentLoading: false,
-            })
+            // Call the server function
+            const result = await generateListingFn({ data })
+
+            if (result.success) {
+              // Store the generated content
+              set({
+                generatedContent: result.content,
+                contentLoading: false,
+                generatedListingId: result.listingId,
+              })
+
+              // Navigate to the listing detail page
+              window.location.href = `/listings/${result.listingId}`
+            } else {
+              throw new Error('Failed to generate listing')
+            }
           } catch (error) {
             console.error('Error generating listing:', error)
             set({ contentLoading: false })
+            // You might want to show an error toast here
           }
         },
 

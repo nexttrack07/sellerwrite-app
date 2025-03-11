@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      listing_analyses: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          id: number
+          listing_id: number
+          version_id: number
+        }
+        Insert: {
+          analysis_data: Json
+          created_at?: string
+          id?: number
+          listing_id: number
+          version_id: number
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          id?: number
+          listing_id?: number
+          version_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_analyses_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "product_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_analyses_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "listing_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_versions: {
         Row: {
           bullet_points: Json
@@ -58,8 +97,8 @@ export type Database = {
           id: number
           keywords: Json
           marketplace: string
-          style: Database["public"]["Enums"]["style"]
-          tone: number
+          style: Database["public"]["Enums"]["style"] | null
+          tone: number | null
           updated_at: string | null
           user_id: string
         }
@@ -70,8 +109,8 @@ export type Database = {
           id?: number
           keywords: Json
           marketplace: string
-          style: Database["public"]["Enums"]["style"]
-          tone: number
+          style?: Database["public"]["Enums"]["style"] | null
+          tone?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -82,8 +121,8 @@ export type Database = {
           id?: number
           keywords?: Json
           marketplace?: string
-          style?: Database["public"]["Enums"]["style"]
-          tone?: number
+          style?: Database["public"]["Enums"]["style"] | null
+          tone?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -107,12 +146,13 @@ export type Database = {
     Enums: {
       style:
         | "professional"
-        | "casual"
-        | "technical"
-        | "friendly"
+        | "conversational"
         | "enthusiastic"
-        | "formal"
-        | "informative"
+        | "benefit-focused"
+        | "problem-solution"
+        | "technical"
+        | "premium"
+        | "lifestyle"
     }
     CompositeTypes: {
       [_ in never]: never

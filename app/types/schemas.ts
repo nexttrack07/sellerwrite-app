@@ -10,7 +10,7 @@ export const jsonSchema: z.ZodType<any> = z.union([
   z.lazy(() => z.record(jsonSchema)),
 ])
 
-// Style enum schema
+// Style enum schema - updated to match Supabase enum
 export const styleSchema = z.enum([
   'professional',
   'conversational',
@@ -22,7 +22,7 @@ export const styleSchema = z.enum([
   'lifestyle',
 ])
 
-// Product Listing schema
+// Product Listing schema - updated with nullable fields
 export const productListingSchema = z.object({
   id: z.number(),
   asins: z.array(z.string()),
@@ -30,8 +30,8 @@ export const productListingSchema = z.object({
   current_version_id: z.number().nullable().optional(),
   keywords: z.array(z.string()),
   marketplace: z.string(),
-  style: styleSchema,
-  tone: z.number(),
+  style: styleSchema.nullable().optional(),
+  tone: z.number().nullable().optional(),
   updated_at: z.string().nullable().optional(),
   user_id: z.string(),
 })
@@ -48,6 +48,15 @@ export const listingVersionSchema = z.object({
   version_number: z.number(),
 })
 
+// Listing Analysis schema
+export const listingAnalysisSchema = z.object({
+  id: z.number(),
+  analysis_data: jsonSchema,
+  created_at: z.string(),
+  listing_id: z.number(),
+  version_id: z.number(),
+})
+
 // Create schema for inserting a new product listing
 export const createProductListingSchema = productListingSchema.omit({
   id: true,
@@ -59,6 +68,12 @@ export const createProductListingSchema = productListingSchema.omit({
 
 // Create schema for inserting a new listing version
 export const createListingVersionSchema = listingVersionSchema.omit({
+  id: true,
+  created_at: true,
+})
+
+// Create schema for inserting a new listing analysis
+export const createListingAnalysisSchema = listingAnalysisSchema.omit({
   id: true,
   created_at: true,
 })
@@ -77,7 +92,9 @@ export const updateListingVersionSchema = listingVersionSchema
 export type Style = z.infer<typeof styleSchema>
 export type ProductListing = z.infer<typeof productListingSchema>
 export type ListingVersion = z.infer<typeof listingVersionSchema>
+export type ListingAnalysis = z.infer<typeof listingAnalysisSchema>
 export type CreateProductListing = z.infer<typeof createProductListingSchema>
 export type CreateListingVersion = z.infer<typeof createListingVersionSchema>
+export type CreateListingAnalysis = z.infer<typeof createListingAnalysisSchema>
 export type UpdateProductListing = z.infer<typeof updateProductListingSchema>
 export type UpdateListingVersion = z.infer<typeof updateListingVersionSchema>

@@ -109,6 +109,14 @@ export const fetchAnalysis = createServerFn({
       .limit(1)
       .maybeSingle() // Use maybeSingle instead of single
 
+    if (!analysis) {
+      return {
+        success: true,
+        exists: false,
+        error: null,
+        analysis: null,
+      }
+    }
     if (error) {
       if (error.code === 'PGRST116') {
         // No analysis found

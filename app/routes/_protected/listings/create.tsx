@@ -1,93 +1,16 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { createServerFn, useServerFn } from '@tanstack/react-start'
 import { Style, styleSchema } from '~/types/schemas'
-import { getSupabaseServerClient } from '~/utils/supabase'
-import { useState, useMemo } from 'react'
-import { z } from 'zod'
-import { useMutation } from '~/hooks/useMutation'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '~/components/ui/card'
-import { Asins } from '~/components/Asins'
-import { Keywords } from '~/components/Keywords'
-import { ListingDetails } from '~/components/ListingDetails'
-import { Stepper, type StepItem } from '~/components/Stepper'
 import { Input } from '~/components/ui/input'
 import { Textarea } from '~/components/ui/textarea'
-import { ArrowLeft, ArrowRight, Loader2, X, Search, Hash } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, Search, Hash, X } from 'lucide-react'
 import { useListingStore } from '~/store/listingStore'
 import { KeywordsList } from '~/components/KeywordsList'
 import { RadioCardGroup, RadioCardOption } from '~/components/ui/radio-card-group'
 import { Target, Wrench, Cpu, Crown, Compass } from 'lucide-react'
-
-// Combined schema for both product listing and listing version
-const createCombinedSchema = z.object({
-  // Product listing fields
-  marketplace: z.string().min(1, 'Marketplace is required'),
-  asins: z.array(z.string()),
-  keywords: z.array(z.string()),
-  style: styleSchema,
-  tone: z.number().min(1).max(10),
-
-  // Version fields
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
-  bullet_points: z.array(z.string()).min(1, 'At least one bullet point is required'),
-})
-
-type CreateCombinedInput = z.infer<typeof createCombinedSchema>
-
-export const createListing = createServerFn({
-  method: 'POST',
-})
-  .validator((input: unknown) => {
-    return z
-      .object({
-        data: createCombinedSchema,
-      })
-      .parse(input)
-  })
-  .handler(async ({ data }) => {
-    const supabase = await getSupabaseServerClient()
-
-    // Get non-empty bullet points only
-    const nonEmptyBulletPoints = data.data.bullet_points.filter((point) => point.trim() !== '')
-
-    // 1. First insert the product listing
-    const { data: listingData, error: listingError } = await supabase
-      .from('product_listings')
-      .insert({
-        marketplace: data.data.marketplace,
-        asins: data.data.asins,
-        keywords: data.data.keywords,
-        style: data.data.style,
-        tone: data.data.tone,
-      })
-      .select()
-      .single()
-
-    if (listingError) {
-      throw new Error(`Failed to create listing: ${listingError.message}`)
-    }
-
-    // 2. Then insert the version using the listing ID
-    const { error: versionError } = await supabase.from('listing_versions').insert({
-      product_listing_id: listingData.id,
-      title: data.data.title,
-      description: data.data.description,
-      bullet_points: nonEmptyBulletPoints,
-      is_active: true,
-    })
-
-    if (versionError) {
-      throw new Error(`Failed to create listing version: ${versionError.message}`)
-    }
-
-    return listingData
-  })
-
-export const Route = createFileRoute('/_protected/listings/create')({
-  component: CreateListingPage,
-})
+import { Stepper, type StepItem } from '~/components/Stepper'
 
 // Define the steps for listing creation
 const createListingSteps: StepItem[] = [
@@ -169,55 +92,32 @@ const keywordDensityOptions: RadioCardOption[] = [
   },
 ]
 
+export const Route = createFileRoute('/_protected/listings/create')({
+  component: CreateListingPage,
+})
+
 function CreateListingPage() {
-  // Use the store
   const {
     currentStep,
     setCurrentStep,
     asins,
-    asinLoadingStatus,
-    asinErrors,
     keywords,
     keywordsLoading,
-    listingStyle,
-    listingTone,
-    generatedContent,
-    contentLoading,
-    addAsin,
-    removeAsin,
-    addKeyword,
     removeKeyword,
     toggleKeywordSelection,
-    setListingStyle,
-    setListingTone,
-    generateListing,
-    updateGeneratedContent,
     productDetails,
     setProductDetails,
   } = useListingStore()
 
-  const [formData, setFormData] = useState<CreateCombinedInput>({
-    marketplace: 'USA',
-    asins: [],
-    keywords: [],
-    style: 'professional',
-    tone: 5,
-    title: '',
-    description: '',
-    bullet_points: ['', '', '', '', ''], // Initialize with 5 empty strings
-  })
-
-  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const createListingMutation = useMutation({
-    fn: useServerFn(createListing),
-    onSuccess: () => {
-      navigate({ to: '/listings' })
-    },
-  })
-
   const goToNextStep = () => {
+    if (currentStep === 0) {
+      const productDetailsStep = document.getElementById('product-details-step')
+      if (productDetailsStep) {
+        // For now, we'll rely on the component saving on change
+      }
+    }
     setCurrentStep(currentStep + 1)
   }
 
@@ -226,13 +126,11 @@ function CreateListingPage() {
   }
 
   const handleStepClick = (step: number) => {
-    // Only allow navigation to steps we've completed or the next one
     if (step <= currentStep + 1) {
       setCurrentStep(step)
     }
   }
 
-  // Render step content based on current step
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -250,63 +148,21 @@ function CreateListingPage() {
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData({
-      ...formData,
-      [name]: name === 'tone' ? parseInt(value, 10) : value,
-    })
-  }
-
-  // Handle bullet point changes
-  const handleBulletPointChange = (index: number, value: string) => {
-    const newBulletPoints = [...formData.bullet_points]
-    newBulletPoints[index] = value
-    setFormData({
-      ...formData,
-      bullet_points: newBulletPoints,
-    })
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    try {
-      // Validate the form data before submitting
-      createCombinedSchema.parse(formData)
-
-      // Call the mutation to create the listing
-      createListingMutation.mutate({ data: formData })
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        // Format and display validation errors
-        const errorMessages = err.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
-        setError(errorMessages)
-      } else {
-        setError('An unexpected error occurred')
-      }
-    }
-  }
-
   return (
-    <div className="container max-w-5xl py-10 mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Create Amazon Listing</h1>
-
-      {/* Stepper */}
-      <Stepper steps={createListingSteps} currentStep={currentStep} onStepClick={handleStepClick} className="mb-10" />
-
-      {/* Step Content */}
-      <div className="mb-8">{renderStepContent()}</div>
-
-      {/* Navigation */}
-      <div className="flex justify-between">
+    <div className="container max-w-5xl py-8 px-6 mx-auto">
+      <Stepper steps={createListingSteps} currentStep={currentStep} onStepClick={handleStepClick} />
+      <div className="mt-8">{renderStepContent()}</div>
+      <div className="mt-8 flex justify-between">
         <Button variant="outline" onClick={goToPreviousStep} disabled={currentStep === 0}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
         </Button>
-
-        <Button onClick={goToNextStep} disabled={currentStep === createListingSteps.length - 1}>
-          Next <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+        {currentStep < createListingSteps.length - 1 ? (
+          <Button onClick={goToNextStep}>
+            Next
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
     </div>
   )
@@ -316,117 +172,164 @@ function CreateListingPage() {
 function ProductDetailsStep() {
   const { productDetails, setProductDetails } = useListingStore()
 
+  // Add state for product name
+  const [name, setName] = useState(productDetails.name || '')
+
+  // Add state for specific product questions
+  const [uniqueFeatures, setUniqueFeatures] = useState(productDetails.uniqueFeatures || '')
+  const [keyHighlights, setKeyHighlights] = useState(productDetails.keyHighlights || '')
+  const [targetAudience, setTargetAudience] = useState(productDetails.targetAudience || '')
+  const [competitiveAdvantage, setCompetitiveAdvantage] = useState(productDetails.competitiveAdvantage || '')
+
+  // Update the handleChange function for all fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setProductDetails({ ...productDetails, [name]: value })
+    const { name: fieldName, value } = e.target
+
+    switch (fieldName) {
+      case 'name':
+        setName(value)
+        break
+      case 'uniqueFeatures':
+        setUniqueFeatures(value)
+        break
+      case 'keyHighlights':
+        setKeyHighlights(value)
+        break
+      case 'targetAudience':
+        setTargetAudience(value)
+        break
+      case 'competitiveAdvantage':
+        setCompetitiveAdvantage(value)
+        break
+      default:
+        // Handle other fields
+        setProductDetails({
+          ...productDetails,
+          [fieldName]: value,
+        })
+    }
   }
 
+  // Save data whenever it changes
+  useEffect(() => {
+    setProductDetails({
+      ...productDetails,
+      name,
+      uniqueFeatures,
+      keyHighlights,
+      targetAudience,
+      competitiveAdvantage,
+    })
+  }, [name, uniqueFeatures, keyHighlights, targetAudience, competitiveAdvantage])
+
   return (
-    <Card>
+    <Card id="product-details-step">
       <CardHeader>
-        <CardTitle>Describe Your Product</CardTitle>
-        <CardDescription>
-          Help us understand your product better to create a more targeted and effective listing. This information
-          guides our AI in generating the most relevant content for your specific product.
-        </CardDescription>
+        <CardTitle>Product Details</CardTitle>
+        <CardDescription>Tell us about your product to create a better listing</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-5">
-          <div className="space-y-2">
-            <label htmlFor="productType" className="text-sm font-medium">
-              What is your product? <span className="text-muted-foreground">(required)</span>
-            </label>
-            <Input
-              id="productType"
-              name="productType"
-              placeholder="e.g., Yoga mat, Coffee maker, Wireless headphones"
-              value={productDetails.productType || ''}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="category" className="text-sm font-medium">
-              What category does your product belong to? <span className="text-muted-foreground">(required)</span>
-            </label>
-            <Input
-              id="category"
-              name="category"
-              placeholder="e.g., Fitness Equipment, Kitchen Appliances, Electronics"
-              value={productDetails.category || ''}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="uniqueFeatures" className="text-sm font-medium">
-              What unique features does your product have compared to competitors?
-            </label>
-            <Textarea
-              id="uniqueFeatures"
-              name="uniqueFeatures"
-              placeholder="Describe what makes your product stand out from similar products"
-              value={productDetails.uniqueFeatures || ''}
-              onChange={handleChange}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="keyFeatures" className="text-sm font-medium">
-              What key features should be highlighted in your listing?
-            </label>
-            <Textarea
-              id="keyFeatures"
-              name="keyFeatures"
-              placeholder="List the most important features customers should know about"
-              value={productDetails.keyFeatures || ''}
-              onChange={handleChange}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="targetAudience" className="text-sm font-medium">
-              Who is your target audience or ideal customer?
-            </label>
-            <Input
-              id="targetAudience"
-              name="targetAudience"
-              placeholder="e.g., Fitness enthusiasts, Home cooks, Professionals who travel"
-              value={productDetails.targetAudience || ''}
-              onChange={handleChange}
-            />
-          </div>
+        {/* Product Name (Required) */}
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium mb-1">
+            Product Name <span className="text-red-500">*</span>
+          </label>
+          <Input
+            id="name"
+            name="name"
+            value={name}
+            onChange={handleChange}
+            placeholder="Enter your product name"
+            required
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            This is the basic name of your product (e.g., "Wireless Headphones", "Yoga Mat")
+          </p>
         </div>
 
-        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-md p-3">
-          <div className="flex items-start gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-            <div>
-              <h4 className="text-sm font-medium text-amber-800 dark:text-amber-300">Important</h4>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                The more specific information you provide here, the better your listing will be. These details will be
-                used alongside any ASINs you add in the next step to create a comprehensive and targeted product
-                listing.
-              </p>
-            </div>
-          </div>
+        {/* Product Category */}
+        <div>
+          <label htmlFor="category" className="block text-sm font-medium mb-1">
+            Product Category <span className="text-red-500">*</span>
+          </label>
+          <Input
+            id="category"
+            name="category"
+            value={productDetails.category || ''}
+            onChange={handleChange}
+            placeholder="e.g., Electronics, Kitchen, Fitness"
+            required
+          />
+        </div>
+
+        {/* Unique Features (Optional) */}
+        <div>
+          <label htmlFor="uniqueFeatures" className="block text-sm font-medium mb-1">
+            What makes your product unique?
+          </label>
+          <Textarea
+            id="uniqueFeatures"
+            name="uniqueFeatures"
+            value={uniqueFeatures}
+            onChange={handleChange}
+            placeholder="Describe any unique features or innovations your product offers"
+            rows={3}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Optional: Helps us highlight what sets your product apart
+          </p>
+        </div>
+
+        {/* Key Highlights (Optional) */}
+        <div>
+          <label htmlFor="keyHighlights" className="block text-sm font-medium mb-1">
+            What are the key things to highlight about your product?
+          </label>
+          <Textarea
+            id="keyHighlights"
+            name="keyHighlights"
+            value={keyHighlights}
+            onChange={handleChange}
+            placeholder="List the most important features or benefits customers should know"
+            rows={3}
+          />
+          <p className="text-xs text-muted-foreground mt-1">Optional: These will be emphasized in your listing</p>
+        </div>
+
+        {/* Target Audience (Optional) */}
+        <div>
+          <label htmlFor="targetAudience" className="block text-sm font-medium mb-1">
+            Who is your target audience?
+          </label>
+          <Textarea
+            id="targetAudience"
+            name="targetAudience"
+            value={targetAudience}
+            onChange={handleChange}
+            placeholder="Describe your ideal customers and how they'll use your product"
+            rows={3}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Optional: Helps tailor the listing to appeal to your specific audience
+          </p>
+        </div>
+
+        {/* Competitive Advantage (Optional) */}
+        <div>
+          <label htmlFor="competitiveAdvantage" className="block text-sm font-medium mb-1">
+            What differentiates your product from competitors?
+          </label>
+          <Textarea
+            id="competitiveAdvantage"
+            name="competitiveAdvantage"
+            value={competitiveAdvantage}
+            onChange={handleChange}
+            placeholder="Explain how your product is better than similar products on the market"
+            rows={3}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Optional: Helps position your product effectively against competition
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -458,8 +361,8 @@ function ASINInputStep() {
       <CardHeader>
         <CardTitle>Add Amazon ASINs</CardTitle>
         <CardDescription>
-          Enter the ASIN(s) of products you want to analyze. We'll extract relevant keywords to help optimize your
-          listing.
+          Enter the ASIN(s) of products you want to use for getting keywords. We'll extract relevant keywords to help
+          optimize your listing.
         </CardDescription>
       </CardHeader>
       <CardContent>
