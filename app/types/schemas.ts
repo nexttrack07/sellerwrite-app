@@ -22,13 +22,50 @@ export const styleSchema = z.enum([
   'lifestyle',
 ])
 
-// Product Listing schema - updated with nullable fields
+// Title schema
+export const titleSchema = z.object({
+  id: z.number(),
+  listing_id: z.number().nullable().optional(),
+  content: z.string(),
+  version_number: z.number(),
+  is_current: z.boolean().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  keywords_used: z.array(z.string()).nullable().optional(),
+  analysis_data: jsonSchema.nullable().optional()
+})
+
+// Features schema
+export const featuresSchema = z.object({
+  id: z.number(),
+  listing_id: z.number().nullable().optional(),
+  content: z.array(z.string()),
+  version_number: z.number(),
+  is_current: z.boolean().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  keywords_used: z.array(z.string()).nullable().optional(),
+  analysis_data: jsonSchema.nullable().optional()
+})
+
+// Description schema
+export const descriptionSchema = z.object({
+  id: z.number(),
+  listing_id: z.number().nullable().optional(),
+  content: z.string(),
+  version_number: z.number(),
+  is_current: z.boolean().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  keywords_used: z.array(z.string()).nullable().optional(),
+  analysis_data: jsonSchema.nullable().optional()
+})
+
+// Product Listing schema - updated with new references
 export const productListingSchema = z.object({
   id: z.number(),
   asins: z.array(z.string()),
   created_at: z.string().nullable().optional(),
-  current_version_id: z.number().nullable().optional(),
-  keywords: z.array(z.string()),
+  current_title_id: z.number().nullable().optional(),
+  current_features_id: z.number().nullable().optional(),
+  current_description_id: z.number().nullable().optional(),
   marketplace: z.string(),
   style: styleSchema.nullable().optional(),
   tone: z.number().nullable().optional(),
@@ -36,25 +73,22 @@ export const productListingSchema = z.object({
   user_id: z.string(),
 })
 
-// Listing Version schema
-export const listingVersionSchema = z.object({
-  id: z.number(),
-  bullet_points: jsonSchema,
-  created_at: z.string().nullable().optional(),
-  description: z.string(),
-  is_current: z.boolean().nullable().optional(),
-  listing_id: z.number(),
-  title: z.string(),
-  version_number: z.number(),
+// Create schema for inserting a new title
+export const createTitleSchema = titleSchema.omit({
+  id: true,
+  created_at: true,
 })
 
-// Listing Analysis schema
-export const listingAnalysisSchema = z.object({
-  id: z.number(),
-  analysis_data: jsonSchema,
-  created_at: z.string(),
-  listing_id: z.number(),
-  version_id: z.number(),
+// Create schema for inserting new features
+export const createFeaturesSchema = featuresSchema.omit({
+  id: true,
+  created_at: true,
+})
+
+// Create schema for inserting a new description
+export const createDescriptionSchema = descriptionSchema.omit({
+  id: true,
+  created_at: true,
 })
 
 // Create schema for inserting a new product listing
@@ -62,39 +96,45 @@ export const createProductListingSchema = productListingSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-  current_version_id: true,
+  current_title_id: true,
+  current_features_id: true,
+  current_description_id: true,
   user_id: true,
 })
 
-// Create schema for inserting a new listing version
-export const createListingVersionSchema = listingVersionSchema.omit({
-  id: true,
-  created_at: true,
-})
+// Schema for updating a title
+export const updateTitleSchema = titleSchema
+  .omit({ id: true, created_at: true, listing_id: true })
+  .partial()
 
-// Create schema for inserting a new listing analysis
-export const createListingAnalysisSchema = listingAnalysisSchema.omit({
-  id: true,
-  created_at: true,
-})
+// Schema for updating features
+export const updateFeaturesSchema = featuresSchema
+  .omit({ id: true, created_at: true, listing_id: true })
+  .partial()
+
+// Schema for updating a description
+export const updateDescriptionSchema = descriptionSchema
+  .omit({ id: true, created_at: true, listing_id: true })
+  .partial()
 
 // Schema for updating a product listing
 export const updateProductListingSchema = productListingSchema
   .omit({ id: true, created_at: true, user_id: true })
   .partial()
 
-// Schema for updating a listing version
-export const updateListingVersionSchema = listingVersionSchema
-  .omit({ id: true, created_at: true, listing_id: true })
-  .partial()
-
 // Export the types derived from the schemas
 export type Style = z.infer<typeof styleSchema>
+export type Title = z.infer<typeof titleSchema>
+export type Features = z.infer<typeof featuresSchema>
+export type Description = z.infer<typeof descriptionSchema>
 export type ProductListing = z.infer<typeof productListingSchema>
-export type ListingVersion = z.infer<typeof listingVersionSchema>
-export type ListingAnalysis = z.infer<typeof listingAnalysisSchema>
+
+export type CreateTitle = z.infer<typeof createTitleSchema>
+export type CreateFeatures = z.infer<typeof createFeaturesSchema>
+export type CreateDescription = z.infer<typeof createDescriptionSchema>
 export type CreateProductListing = z.infer<typeof createProductListingSchema>
-export type CreateListingVersion = z.infer<typeof createListingVersionSchema>
-export type CreateListingAnalysis = z.infer<typeof createListingAnalysisSchema>
+
+export type UpdateTitle = z.infer<typeof updateTitleSchema>
+export type UpdateFeatures = z.infer<typeof updateFeaturesSchema>
+export type UpdateDescription = z.infer<typeof updateDescriptionSchema>
 export type UpdateProductListing = z.infer<typeof updateProductListingSchema>
-export type UpdateListingVersion = z.infer<typeof updateListingVersionSchema>

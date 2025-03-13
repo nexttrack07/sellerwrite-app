@@ -9,79 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      listing_analyses: {
+      descriptions: {
         Row: {
-          analysis_data: Json
-          created_at: string
+          analysis_data: Json | null
+          content: string
+          created_at: string | null
           id: number
-          listing_id: number
-          version_id: number
+          is_current: boolean | null
+          keywords_used: string[] | null
+          listing_id: number | null
+          version_number: number
         }
         Insert: {
-          analysis_data: Json
-          created_at?: string
+          analysis_data?: Json | null
+          content: string
+          created_at?: string | null
           id?: number
-          listing_id: number
-          version_id: number
+          is_current?: boolean | null
+          keywords_used?: string[] | null
+          listing_id?: number | null
+          version_number: number
         }
         Update: {
-          analysis_data?: Json
-          created_at?: string
+          analysis_data?: Json | null
+          content?: string
+          created_at?: string | null
           id?: number
-          listing_id?: number
-          version_id?: number
+          is_current?: boolean | null
+          keywords_used?: string[] | null
+          listing_id?: number | null
+          version_number?: number
         }
         Relationships: [
           {
-            foreignKeyName: "listing_analyses_listing_id_fkey"
+            foreignKeyName: "descriptions_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "product_listings"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "listing_analyses_version_id_fkey"
-            columns: ["version_id"]
-            isOneToOne: false
-            referencedRelation: "listing_versions"
-            referencedColumns: ["id"]
-          },
         ]
       }
-      listing_versions: {
+      features: {
         Row: {
-          bullet_points: Json
+          analysis_data: Json | null
+          content: string[]
           created_at: string | null
-          description: string
           id: number
           is_current: boolean | null
-          listing_id: number
-          title: string
+          keywords_used: string[] | null
+          listing_id: number | null
           version_number: number
         }
         Insert: {
-          bullet_points: Json
+          analysis_data?: Json | null
+          content: string[]
           created_at?: string | null
-          description: string
           id?: number
           is_current?: boolean | null
-          listing_id: number
-          title: string
+          keywords_used?: string[] | null
+          listing_id?: number | null
           version_number: number
         }
         Update: {
-          bullet_points?: Json
+          analysis_data?: Json | null
+          content?: string[]
           created_at?: string | null
-          description?: string
           id?: number
           is_current?: boolean | null
-          listing_id?: number
-          title?: string
+          keywords_used?: string[] | null
+          listing_id?: number | null
           version_number?: number
         }
         Relationships: [
           {
-            foreignKeyName: "listing_versions_listing_id_fkey"
+            foreignKeyName: "features_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "product_listings"
@@ -93,45 +95,97 @@ export type Database = {
         Row: {
           asins: Json
           created_at: string | null
-          current_version_id: number | null
+          current_description_id: number | null
+          current_features_id: number | null
+          current_title_id: number | null
           id: number
-          keywords: Json
           marketplace: string
-          style: Database["public"]["Enums"]["style"] | null
-          tone: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           asins: Json
           created_at?: string | null
-          current_version_id?: number | null
+          current_description_id?: number | null
+          current_features_id?: number | null
+          current_title_id?: number | null
           id?: number
-          keywords: Json
           marketplace: string
-          style?: Database["public"]["Enums"]["style"] | null
-          tone?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           asins?: Json
           created_at?: string | null
-          current_version_id?: number | null
+          current_description_id?: number | null
+          current_features_id?: number | null
+          current_title_id?: number | null
           id?: number
-          keywords?: Json
           marketplace?: string
-          style?: Database["public"]["Enums"]["style"] | null
-          tone?: number | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "fk_current_version_id"
-            columns: ["current_version_id"]
+            foreignKeyName: "product_listings_current_description_id_fkey"
+            columns: ["current_description_id"]
             isOneToOne: false
-            referencedRelation: "listing_versions"
+            referencedRelation: "descriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_listings_current_features_id_fkey"
+            columns: ["current_features_id"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_listings_current_title_id_fkey"
+            columns: ["current_title_id"]
+            isOneToOne: false
+            referencedRelation: "titles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      titles: {
+        Row: {
+          analysis_data: Json | null
+          content: string
+          created_at: string | null
+          id: number
+          is_current: boolean | null
+          keywords_used: string[] | null
+          listing_id: number | null
+          version_number: number
+        }
+        Insert: {
+          analysis_data?: Json | null
+          content: string
+          created_at?: string | null
+          id?: number
+          is_current?: boolean | null
+          keywords_used?: string[] | null
+          listing_id?: number | null
+          version_number: number
+        }
+        Update: {
+          analysis_data?: Json | null
+          content?: string
+          created_at?: string | null
+          id?: number
+          is_current?: boolean | null
+          keywords_used?: string[] | null
+          listing_id?: number | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "titles_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "product_listings"
             referencedColumns: ["id"]
           },
         ]

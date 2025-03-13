@@ -121,7 +121,6 @@ export const generateListing = createServerFn({
         .insert({
           marketplace: 'USA', // Default to USA
           asins: data.asins,
-          keywords: data.keywords,
           user_id: userData.user.id, // Add the user ID
         })
         .select()
@@ -131,28 +130,91 @@ export const generateListing = createServerFn({
         throw new Error(`Failed to create listing: ${listingError.message}`)
       }
 
-      // Then insert the version using the listing ID
-      const { data: versionData, error: versionError } = await supabase
-        .from('listing_versions')
+      // Insert keywords into the keywords table
+      if (data.keywords && data.keywords.length > 0) {
+        const keywordsToInsert = data.keywords.map(keyword => ({
+          listing_id: listingData.id,
+          keyword,
+          is_selected: true
+        }))
+        
+        const { error: keywordsError } = await supabase
+          .from('keywords')
+          .insert(keywordsToInsert)
+        
+        if (keywordsError) {
+          console.error('Failed to insert keywords:', keywordsError)
+          // Continue anyway since we have the listing ID
+        }
+      }
+
+      // Insert title component
+      const { data: titleData, error: titleError } = await supabase
+        .from('titles')
         .insert({
           listing_id: listingData.id,
-          title: generatedContent.title,
-          description: generatedContent.description,
-          bullet_points: generatedContent.bullet_points,
-          is_current: true,
+          content: generatedContent.title,
           version_number: 1,
+          is_current: true,
+          keywords_used: data.keywords.filter(keyword => 
+            generatedContent.title.toLowerCase().includes(keyword.toLowerCase())
+          )
         })
         .select()
         .single()
 
-      if (versionError) {
-        throw new Error(`Failed to create listing version: ${versionError.message}`)
+      if (titleError) {
+        throw new Error(`Failed to create title: ${titleError.message}`)
       }
 
-      // 5. Update the listing with the current version ID
+      // Insert features component
+      const { data: featuresData, error: featuresError } = await supabase
+        .from('features')
+        .insert({
+          listing_id: listingData.id,
+          content: generatedContent.bullet_points,
+          version_number: 1,
+          is_current: true,
+          keywords_used: data.keywords.filter(keyword => 
+            generatedContent.bullet_points.some((bullet: string) => 
+              bullet.toLowerCase().includes(keyword.toLowerCase())
+            )
+          )
+        })
+        .select()
+        .single()
+
+      if (featuresError) {
+        throw new Error(`Failed to create features: ${featuresError.message}`)
+      }
+
+      // Insert description component
+      const { data: descriptionData, error: descriptionError } = await supabase
+        .from('descriptions')
+        .insert({
+          listing_id: listingData.id,
+          content: generatedContent.description,
+          version_number: 1,
+          is_current: true,
+          keywords_used: data.keywords.filter(keyword => 
+            generatedContent.description.toLowerCase().includes(keyword.toLowerCase())
+          )
+        })
+        .select()
+        .single()
+
+      if (descriptionError) {
+        throw new Error(`Failed to create description: ${descriptionError.message}`)
+      }
+
+      // 5. Update the listing with the current component IDs
       const { error: updateError } = await supabase
         .from('product_listings')
-        .update({ current_version_id: versionData.id })
+        .update({ 
+          current_title_id: titleData.id,
+          current_features_id: featuresData.id,
+          current_description_id: descriptionData.id
+        })
         .eq('id', listingData.id)
 
       if (updateError) {
@@ -164,7 +226,16 @@ export const generateListing = createServerFn({
       return {
         success: true,
         listingId: listingData.id,
-        content: generatedContent,
+        content: {
+          title: generatedContent.title,
+          bulletPoints: generatedContent.bullet_points,
+          description: generatedContent.description
+        },
+        components: {
+          title: titleData,
+          features: featuresData,
+          description: descriptionData
+        }
       }
     } catch (error) {
       console.error('Error in generate_listing:', error)

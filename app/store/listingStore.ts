@@ -85,7 +85,20 @@ interface ListingState {
   setListingTone: (tone: number) => void
   generateListing: (options?: {
     keywordDensity?: { title: string; bullets: string; description: string }
-  }) => Promise<void>
+  }) => Promise<{
+    success: boolean;
+    listingId: number;
+    content: {
+      title: string;
+      bulletPoints: string[];
+      description: string;
+    };
+    components: {
+      title: any;
+      features: any;
+      description: any;
+    };
+  } | undefined>
   updateGeneratedContent: (content: Partial<ListingContent>) => void
 
   // Navigation
@@ -438,13 +451,16 @@ export const useListingStore = create<ListingState>()(
             if (result.success) {
               // Store the generated content
               set({
-                generatedContent: result.content,
+                generatedContent: {
+                  title: result.content.title,
+                  bulletPoints: result.content.bulletPoints,
+                  description: result.content.description
+                },
                 contentLoading: false,
                 generatedListingId: result.listingId,
               })
 
-              // Navigate to the listing detail page
-              window.location.href = `/listings/${result.listingId}`
+              return result
             } else {
               throw new Error('Failed to generate listing')
             }

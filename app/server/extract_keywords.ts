@@ -7,6 +7,48 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+// Helper function to check if a phrase is a subset of another phrase
+function isSubPhrase(phrase1: string, phrase2: string): boolean {
+  const words1 = phrase1.toLowerCase().split(' ')
+  const words2 = phrase2.toLowerCase().split(' ')
+
+  // If phrase1 is longer than phrase2, it can't be a subset
+  if (words1.length > words2.length) return false
+
+  // Check if all words in phrase1 appear in phrase2 in the same order
+  const phrase2Str = words2.join(' ')
+  return phrase2Str.includes(words1.join(' '))
+}
+
+// Helper function to remove redundant keywords
+function removeRedundantKeywords(keywords: Array<{ keyword: string; [key: string]: any }>) {
+  // Sort keywords by length (shortest to longest) to prioritize base terms
+  const sortedKeywords = [...keywords].sort((a, b) => a.keyword.length - b.keyword.length)
+
+  const uniqueKeywords: Array<{ keyword: string; [key: string]: any }> = []
+  const seenPhrases = new Set<string>()
+
+  for (const keyword of sortedKeywords) {
+    const currentPhrase = keyword.keyword.toLowerCase()
+
+    // Skip if we've seen this exact phrase
+    if (seenPhrases.has(currentPhrase)) continue
+
+    // Check if this phrase is redundant with any existing phrases
+    const isRedundant = uniqueKeywords.some(
+      (existingKeyword) =>
+        isSubPhrase(existingKeyword.keyword, currentPhrase) || isSubPhrase(currentPhrase, existingKeyword.keyword),
+    )
+
+    if (!isRedundant) {
+      uniqueKeywords.push(keyword)
+      seenPhrases.add(currentPhrase)
+    }
+  }
+
+  return uniqueKeywords
+}
+
 // Server function to extract keywords from an Amazon listing
 export const extractKeywords = createServerFn()
   .validator((d: unknown) =>
@@ -20,19 +62,32 @@ export const extractKeywords = createServerFn()
   )
   .handler(async ({ data: { title, description, bulletPoints } }) => {
     try {
-      // Modify the prompt to explicitly exclude brand names and trademarks
       function buildPrompt(productData: { title: string; description: string; bulletPoints: string[] }) {
         return `
 Extract relevant keywords from the following Amazon product information. Focus on descriptive, generic terms that shoppers would use to find this type of product.
 
-IMPORTANT: DO NOT include any of the following in your keyword extraction:
-- Brand names, company names, or product line names
-- Trademarked terms (including those with ™, ®, © symbols)
-- Proprietary model numbers or product codes
-- Competitor brand names
-- Product-specific unique identifiers
+IMPORTANT RULES:
+1. DO NOT include:
+   - Brand names, company names, or product line names
+   - Trademarked terms (including those with ™, ®, © symbols)
+   - Proprietary model numbers or product codes
+   - Competitor brand names
+   - Product-specific unique identifiers
 
-For example, if analyzing "Nike Air Jordan Basketball Shoes", extract terms like "basketball shoes", "athletic footwear", "court shoes", "high-top sneakers" - but NOT "Nike", "Air Jordan", or "Jordan".
+2. Keyword Guidelines:
+   - Each keyword should be a unique concept
+   - DO NOT repeat the same base term with different modifiers
+   - Use the most specific/complete version of a term
+   - Avoid redundant variations of the same concept
+
+Examples:
+BAD (redundant):
+- phone case, clear phone case, magnetic phone case
+- puzzle, landscape puzzle, scenery puzzle
+
+GOOD (unique concepts):
+- phone case, magnetic mount, shock protection
+- jigsaw puzzle, landscape scenery, memory improvement
 
 Product Title:
 ${productData.title}
@@ -43,18 +98,20 @@ ${productData.description}
 Product Features:
 ${productData.bulletPoints.join('\n')}
 
-Analyze the text above and extract a list of relevant, generic keywords that potential customers might use to search for this type of product on Amazon. Focus on terms that describe:
-- Product category and type
-- Features and functionality
+Analyze the text above and extract a list of unique, non-redundant keywords that potential customers might use to search for this type of product on Amazon. Focus on terms that describe:
+- Core product type (single most specific term)
+- Unique features and functionality
 - Materials and components
 - Use cases and applications
 - Problems the product solves
 - Target audience or user demographics
 
+Each term should represent a distinct concept without repeating base terms.
+
 Format your response as a JSON array of keyword objects with the following structure:
 [
   {
-    "keyword": "descriptive term",
+    "keyword": "unique descriptive term",
     "searchVolume": "estimated search popularity (high/medium/low)",
     "competition": "level of keyword competition (high/medium/low)",
     "relevance": "relevance to the product (high/medium/low)"
@@ -82,38 +139,36 @@ Format your response as a JSON array of keyword objects with the following struc
       const jsonText = (message.content[0] as any).text
       const cleanedJson = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '')
       const keywordsData = JSON.parse(cleanedJson)
-      console.log('keywordsData', keywordsData)
-
-      // Add this function to filter out any remaining brand terms
-      function filterBrandTerms(
-        keywords: { keyword: string }[],
-        brandTerms: string[] | undefined,
-      ): { keyword: string }[] {
-        // Add a null check to handle undefined brandTerms
-        if (!brandTerms || !Array.isArray(brandTerms)) {
-          return keywords // Return original keywords if no brand terms to filter
-        }
-
-        // Now we can safely use filter since we've verified brandTerms exists
-        return keywords.filter((keyword) => {
-          // Check if any brand term is contained in the keyword
-          return !brandTerms.some((brand) => keyword.keyword.toLowerCase().includes(brand.toLowerCase()))
-        })
-      }
 
       // Extract potential brand names from the product title
-      // This is a simple approach - you might need more sophisticated brand detection
       const potentialBrands = title
         .split(' ')
-        .slice(0, 2) // First two words often contain brand
+        .slice(0, 2)
         .filter((word) => word.length > 2)
 
       // Filter out brand terms
       const filteredKeywords = filterBrandTerms(keywordsData, potentialBrands)
 
+      // Remove redundant keywords
+      const uniqueKeywords = removeRedundantKeywords(filteredKeywords)
+
+      // Validate the final keywords
+      const validatedKeywords = uniqueKeywords.filter((keyword) => {
+        // Ensure minimum length
+        if (keyword.keyword.length < 3) return false
+
+        // Ensure keyword is not just numbers
+        if (/^\d+$/.test(keyword.keyword)) return false
+
+        // Ensure keyword contains actual words
+        if (!/[a-zA-Z]/.test(keyword.keyword)) return false
+
+        return true
+      })
+
       return {
         success: true,
-        keywords: filteredKeywords,
+        keywords: validatedKeywords,
       }
     } catch (error: any) {
       console.error('Keyword extraction error:', error)
@@ -124,3 +179,14 @@ Format your response as a JSON array of keyword objects with the following struc
       }
     }
   })
+
+// Add this function to filter out any remaining brand terms
+function filterBrandTerms(keywords: { keyword: string }[], brandTerms: string[] | undefined): { keyword: string }[] {
+  if (!brandTerms || !Array.isArray(brandTerms)) {
+    return keywords
+  }
+
+  return keywords.filter((keyword) => {
+    return !brandTerms.some((brand) => keyword.keyword.toLowerCase().includes(brand.toLowerCase()))
+  })
+}

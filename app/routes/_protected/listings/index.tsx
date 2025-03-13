@@ -28,27 +28,27 @@ export const fetchListings = createServerFn({
     throw new Error(listingsError.message)
   }
 
-  // Then get all current versions
-  const currentVersionIds = listings.map((listing) => listing.current_version_id).filter((id) => id != null)
+  // Then get all current titles
+  const currentTitleIds = listings.map((listing) => listing.current_title_id).filter((id) => id != null)
 
-  const { data: versions, error: versionsError } = await supabase
-    .from('listing_versions')
-    .select('id, title')
-    .in('id', currentVersionIds)
+  const { data: titles, error: titlesError } = await supabase
+    .from('titles')
+    .select('id, content')
+    .in('id', currentTitleIds)
 
-  if (versionsError) {
-    throw new Error(versionsError.message)
+  if (titlesError) {
+    throw new Error(titlesError.message)
   }
 
-  // Create a map of version IDs to titles
-  const versionMap = new Map(versions.map((v) => [v.id, v.title]))
+  // Create a map of title IDs to title content
+  const titleMap = new Map(titles.map((t) => [t.id, t.content]))
 
   // Combine the data
   const listingsWithTitles = listings.map((listing) => ({
     ...listing,
     asins: Array.isArray(listing.asins) ? listing.asins : [],
     keywords: Array.isArray(listing.keywords) ? listing.keywords : [],
-    current_version: listing.current_version_id ? { title: versionMap.get(listing.current_version_id) || '' } : null,
+    current_version: listing.current_title_id ? { title: titleMap.get(listing.current_title_id) || '' } : null,
   }))
 
   // Validate with Zod and return
@@ -70,7 +70,7 @@ function ListingsComponent() {
   const listings = Route.useLoaderData() as ListingWithTitle[]
 
   return (
-    <div className="container py-10 mx-auto">
+    <div className="container px-6 py-10 mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Listings</h1>
         <Button asChild>

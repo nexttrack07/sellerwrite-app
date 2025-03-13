@@ -1,0 +1,251 @@
+# SellerWrite App Codebase Notes
+
+## Project Structure
+
+- TanStack Start application for Amazon seller listing creation and optimization
+- Uses TanStack Router for routing
+- Supabase for backend/database
+- UI components from shadcn/ui library
+
+## Key Components
+
+- Main functionality in /app/routes/\_protected/analyze.tsx and /app/routes/\_protected/listings
+- Authentication flow in Login.tsx, Auth.tsx components
+- Keywords analysis in Keywords.tsx, KeywordsTable.tsx, KeywordsList.tsx
+
+## Development Notes
+
+- When adding new features, consider reusing existing UI components
+- Check for imports before removing any files
+- The app/components/ui directory contains shadcn components - modifications should follow their pattern
+
+# Application Structure and Patterns
+
+This is a React application that helps users create and optimize Amazon product listings. The app uses:
+
+- Tanstack Router for routing
+- Supabase for backend services and authentication
+- Claude AI for generating and analyzing product listings
+- TypeScript for type safety
+- Zod for data validation
+- Shadcn UI components for the interface
+
+## Server Functions
+
+Server functions are a core part of the application architecture:
+
+1. Creation Pattern:
+
+   - Created using `createServerFn` from @tanstack/react-start
+   - Typically include a validator and handler
+   - Example structure:
+     ```typescript
+     export const functionName = createServerFn({
+       method: 'POST', // or 'GET'
+     })
+       .validator((input: unknown) => {
+         return z.object({...}).parse(input)
+       })
+       .handler(async ({ data }) => {
+         // Implementation
+         return result
+       })
+     ```
+
+2. Common Server Functions:
+
+   - `generateListing`: Creates AI-generated product listings
+   - `analyzeListing`: Analyzes existing listings for effectiveness
+   - `extractKeywords`: Extracts relevant keywords from product data
+   - `createListing`: Saves listings to the database
+   - `fetchListing`: Retrieves listings from the database
+
+3. Usage Pattern:
+   - Import with `useServerFn` in components
+   - Call with data object: `const result = await functionName({ data })`
+   - Handle loading states and errors in UI
+
+## Anthropic API Integration
+
+The application uses Claude AI through the Anthropic API:
+
+1. API Client:
+
+   - Uses the official Anthropic SDK: `import Anthropic from '@anthropic-ai/sdk'`
+   - Client initialization: `const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })`
+
+2. Messages API:
+
+   - Uses the newer Messages API format (not the older Completions API)
+   - Model: `claude-3-7-sonnet-20250219`
+   - Example usage:
+     ```typescript
+     const message = await anthropic.messages.create({
+       model: 'claude-3-7-sonnet-20250219',
+       max_tokens: 2000,
+       messages: [{ role: 'user', content: prompt }],
+     })
+     ```
+
+3. Response Handling:
+   - Responses often contain JSON wrapped in markdown code blocks
+   - Cleaning pattern: `jsonText.replace(/^```json\n/, '').replace(/\n```$/, '')`
+   - Parse with `JSON.parse(cleanedJson)`
+
+## UI Components
+
+The application uses Shadcn UI components:
+
+1. Component Structure:
+
+   - Located in `app/components/ui/` directory
+   - Built on Radix UI primitives
+   - Use the `cn` utility for conditional class names
+
+2. Common Components:
+
+   - Card, CardHeader, CardContent, CardFooter: Used for content containers
+   - Button: Used for actions with various variants
+   - Input, Textarea: Form controls
+   - Dialog, AlertDialog: Modal interfaces
+   - RadioCardGroup: Custom component for selectable cards
+
+3. Usage Pattern:
+   - Import from component path: `import { Button } from '~/components/ui/button'`
+   - Apply variants with className: `<Button variant="outline">...</Button>`
+   - Compose with other components: `<Card><CardHeader>...</CardHeader></Card>`
+
+## Database Schema and Operations
+
+The application uses Supabase for database operations:
+
+1. Main Tables:
+
+   - `product_listings`: Stores basic listing info
+     - Fields: id, marketplace, asins, keywords, style, tone, user_id, current_version_id
+   - `listing_versions`: Stores different versions of listing content
+     - Fields: id, listing_id, title, description, bullet_points, is_current, version_number
+   - `listing_analyses`: Stores AI analysis results
+     - Fields: id, listing_id, version_id, analysis_data, created_at
+
+2. Database Operations:
+
+   - Get Supabase client: `const supabase = await getSupabaseServerClient()`
+   - Insert: `await supabase.from('table_name').insert({ ... }).select().single()`
+   - Select: `await supabase.from('table_name').select('*').eq('field', value)`
+   - Update: `await supabase.from('table_name').update({ ... }).eq('id', id)`
+
+3. Row-Level Security:
+   - All operations include user_id to enforce ownership
+   - Policies ensure users can only access their own data
+
+## Authentication Flow
+
+Authentication is handled through Supabase:
+
+1. User Session:
+
+   - Get current user: `const { data: userData } = await supabase.auth.getUser()`
+   - Get session: `const { data: session } = await supabase.auth.getSession()`
+   - Check authentication: `if (!userData.user?.id) throw new Error('User not authenticated')`
+
+2. User ID in Operations:
+
+   - Always include user_id in database operations: `user_id: userData.user.id`
+   - This ensures row-level security policies work correctly
+
+3. Protected Routes:
+   - Routes under `_protected` require authentication
+   - Redirect unauthenticated users to login
+
+## Listing Generation Flow
+
+The listing generation process follows these steps:
+
+1. Collect Product Details:
+
+   - Product name, category, unique features
+   - Target audience, competitive advantages
+   - Store in the listing store
+
+2. Extract Keywords:
+
+   - From ASINs or manual entry
+   - Filter and select relevant keywords
+   - Store selected keywords in the listing store
+
+3. Select Style and Tone:
+
+   - Choose copywriting style (benefit-focused, technical, etc.)
+   - Set tone level (1-10)
+   - Store in the listing store
+
+4. Configure Keyword Density:
+
+   - Set density levels for title, bullets, and description
+   - Options: low, medium, high
+
+5. Generate Listing:
+
+   - Call Claude API with all collected data
+   - Parse and clean the response
+   - Save to database (product_listings and listing_versions tables)
+
+6. Display Results:
+   - Navigate to the listing detail page
+   - Show the generated content with options to edit or analyze
+
+## Error Handling Patterns
+
+The application uses consistent error handling:
+
+1. Server Functions:
+
+   - Use try/catch blocks around API calls and database operations
+   - Return structured error responses: `{ success: false, error: true, message: error.message }`
+   - Log detailed errors to console: `console.error('Error details:', error)`
+
+2. UI Components:
+
+   - Handle loading states with skeleton loaders or spinners
+   - Display user-friendly error messages
+   - Provide retry options when appropriate
+
+3. Form Validation:
+   - Use Zod schemas for input validation
+   - Show validation errors inline with form fields
+   - Prevent submission of invalid data
+
+When working with this codebase, maintain these patterns for consistency and reliability.
+
+## Development Workflow
+
+Always follow this workflow when making code changes:
+
+1. Planning First:
+
+   - Before implementing any code changes, always outline a clear plan of action
+   - Break down the task into specific, logical steps
+   - Identify potential challenges or edge cases
+   - List files that will need to be modified
+
+2. Approval Process:
+
+   - Present the plan to the user for review
+   - Wait for explicit approval before proceeding with implementation
+   - Address any feedback or adjustments requested by the user
+   - Only proceed with coding after the plan is approved
+
+3. Implementation:
+
+   - Follow the approved plan step by step
+   - Implement changes in a clear, organized manner
+   - Add comments where necessary to explain complex logic
+   - Ensure code follows the established patterns in the codebase
+
+4. Review:
+   - After implementation, summarize what was done
+   - Highlight any deviations from the original plan and explain why
+   - Suggest any follow-up actions or improvements
+
+This workflow ensures clarity, alignment, and quality in all code changes. Never skip the planning and approval steps, even for seemingly simple changes.

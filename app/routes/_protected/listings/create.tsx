@@ -665,8 +665,16 @@ export const GenerationStep = () => {
         },
       })
 
-      // The store's generateListing function handles navigation internally
+      // Show success message
+      toast.success('Listing created successfully!')
+      
+      // Reset the store
       resetStore()
+      
+      // Navigate to the listing detail page
+      if (result?.listingId) {
+        navigate({ to: '/listings/$id', params: { id: result.listingId.toString() } })
+      }
     } catch (error) {
       console.error('Error generating listing:', error)
       toast.error('Failed to generate listing')
