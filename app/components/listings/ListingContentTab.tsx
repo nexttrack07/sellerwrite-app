@@ -18,9 +18,8 @@ export interface ListingData {
   id: number
   marketplace: string
   asins: string[]
-  keywords: string[]
-  style: string
-  tone: number
+  style?: string
+  tone?: number
   created_at: string
   current_title_id?: number
   current_features_id?: number

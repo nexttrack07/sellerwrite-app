@@ -22,6 +22,11 @@ export interface Keyword {
   competition?: string
   relevance?: string
   selected: boolean
+  usedIn?: {
+    title: boolean
+    features: boolean
+    description: boolean
+  }
 }
 
 interface ListingContent {
@@ -335,7 +340,7 @@ export const useListingStore = create<ListingState>()(
             console.log('Extract keywords result:', result)
 
             if (result.success && result.keywords && result.keywords.length > 0) {
-              // Transform the keywords into our format with IDs
+              // Transform the keywords into our format with IDs and track where they're used
               const newKeywords = result.keywords.map((kw) => ({
                 id: `${asin}-${kw.keyword}-${Math.random().toString(36).substring(2, 9)}`, // Generate a unique ID
                 text: kw.keyword,
@@ -344,6 +349,12 @@ export const useListingStore = create<ListingState>()(
                 competition: kw.competition,
                 relevance: kw.relevance,
                 selected: true, // Default to selected
+                usedIn: {
+                  // These will be set when the listing is generated
+                  title: false,
+                  features: false,
+                  description: false
+                }
               }))
 
               // Add to existing keywords, avoiding duplicates by text
@@ -377,6 +388,11 @@ export const useListingStore = create<ListingState>()(
             text: keyword.trim(),
             sourceAsin: null, // Null indicates manually added
             selected: true,
+            usedIn: {
+              title: false,
+              features: false,
+              description: false
+            }
           }
 
           // Only add if not a duplicate
@@ -431,6 +447,7 @@ export const useListingStore = create<ListingState>()(
 
               // ASINs and keywords
               asins: state.asins,
+              // Keywords - now these will be stored in the component tables (title, features, description)
               keywords: state.keywords.filter((k) => k.selected).map((k) => k.text),
 
               // Style and tone

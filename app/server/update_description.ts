@@ -7,11 +7,19 @@ export const updateDescription = createServerFn({
   method: 'POST',
 })
 .validator((d: unknown) => {
-  return z.object({
-    listing_id: z.number(),
-    content: z.string(),
-    keywords_used: z.array(z.string()).optional()
-  }).parse(d);
+  return z.union([
+    // Full update with content
+    z.object({
+      listing_id: z.number(),
+      content: z.string(),
+      keywords_used: z.array(z.string()).optional()
+    }),
+    // Just update keywords for an existing description
+    z.object({
+      id: z.number(),
+      keywords_used: z.array(z.string())
+    })
+  ]).parse(d);
 })
 .handler(async ({ data }) => {
   const supabase = await getSupabaseServerClient();
@@ -21,6 +29,24 @@ export const updateDescription = createServerFn({
     throw new Error('User not authenticated');
   }
   
+  // Check if this is just a keywords update
+  if ('id' in data) {
+    // Just update the keywords_used field for an existing description
+    const { data: updatedDescription, error: updateError } = await supabase
+      .from('descriptions')
+      .update({ keywords_used: data.keywords_used })
+      .eq('id', data.id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      throw new Error(`Failed to update description keywords: ${updateError.message}`);
+    }
+    
+    return updatedDescription;
+  }
+  
+  // Full update with content
   // Verify user owns this listing
   const { data: listing, error: listingError } = await supabase
     .from('product_listings')

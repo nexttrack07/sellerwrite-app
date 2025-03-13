@@ -184,21 +184,40 @@ function ListingDetailsPage() {
         }
       }
 
-      // Update the listing with new keywords using the proper update function
-      const updateResult = await updateListingFn({
-        data: {
-          id: listingQuery.data.listing.id,
+      // Update the title, features, and description with the new keywords
+      const keywordsArray = Array.from(extractedKeywords)
+      
+      // Update title if it exists
+      if (listingQuery.data.title?.id) {
+        await updateTitleFn({
           data: {
-            keywords: Array.from(extractedKeywords),
+            id: listingQuery.data.title.id,
+            keywords_used: keywordsArray,
           },
-        },
-      })
-
-      if (!updateResult.success) {
-        throw new Error(updateResult.message || 'Failed to update listing')
+        })
+      }
+      
+      // Update features if they exist
+      if (listingQuery.data.features?.id) {
+        await updateFeaturesFn({
+          data: {
+            id: listingQuery.data.features.id,
+            keywords_used: keywordsArray,
+          },
+        })
+      }
+      
+      // Update description if it exists
+      if (listingQuery.data.description?.id) {
+        await updateDescriptionFn({
+          data: {
+            id: listingQuery.data.description.id,
+            keywords_used: keywordsArray,
+          },
+        })
       }
 
-      return updateResult.data
+      return { success: true }
     },
     onSuccess: () => {
       toast.success('Keywords re-extracted successfully')
@@ -320,7 +339,9 @@ function ListingDetailsPage() {
           </Card>
 
           <Keywords
-            keywords={listingQuery.data?.listing?.keyword_usage || listingQuery.data?.listing?.keywords || []}
+            title={listingQuery.data?.title}
+            features={listingQuery.data?.features}
+            description={listingQuery.data?.description}
             onAddKeyword={() => {}}
             onRemoveKeyword={(keyword: string) => {}}
             onKeywordClick={handleKeywordClick}
@@ -336,13 +357,12 @@ function ListingDetailsPage() {
               id: listingQuery.data?.listing?.id || 0,
               marketplace: listingQuery.data?.listing?.marketplace || '',
               asins: listingQuery.data?.listing?.asins || [],
-              keywords: listingQuery.data?.listing?.keywords || [],
-              style: listingQuery.data?.listing?.style || '',
-              tone: listingQuery.data?.listing?.tone || 5,
               created_at: listingQuery.data?.listing?.created_at || '',
               title: listingQuery.data?.title,
               features: listingQuery.data?.features,
               description: listingQuery.data?.description,
+              style: listingQuery.data?.listing?.style,
+              tone: listingQuery.data?.listing?.tone
             }}
             onAnalyzeTitle={handleAnalyzeTitle}
             onAnalyzeFeatures={handleAnalyzeFeatures}

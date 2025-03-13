@@ -43,16 +43,8 @@ CREATE TABLE descriptions (
   analysis_data JSONB DEFAULT '{}'
 );
 
--- Create keywords table (optional)
-CREATE TABLE keywords (
-  id BIGSERIAL PRIMARY KEY,
-  listing_id BIGINT REFERENCES product_listings(id) ON DELETE CASCADE,
-  keyword TEXT NOT NULL,
-  relevance_score NUMERIC,
-  search_volume INTEGER,
-  is_selected BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Note: Keywords are stored directly in the keywords_used column of each component table (titles, features, descriptions)
+-- This allows for tracking which keywords are used in each component
 ```
 
 ### Step 2: Update the product_listings Table and Drop Old Tables
@@ -120,20 +112,7 @@ CREATE POLICY descriptions_delete_policy ON descriptions FOR DELETE USING (
   listing_id IN (SELECT id FROM product_listings WHERE user_id = auth.uid())
 );
 
--- For keywords table
-ALTER TABLE keywords ENABLE ROW LEVEL SECURITY;
-CREATE POLICY keywords_select_policy ON keywords FOR SELECT USING (
-  listing_id IN (SELECT id FROM product_listings WHERE user_id = auth.uid())
-);
-CREATE POLICY keywords_insert_policy ON keywords FOR INSERT WITH CHECK (
-  listing_id IN (SELECT id FROM product_listings WHERE user_id = auth.uid())
-);
-CREATE POLICY keywords_update_policy ON keywords FOR UPDATE USING (
-  listing_id IN (SELECT id FROM product_listings WHERE user_id = auth.uid())
-);
-CREATE POLICY keywords_delete_policy ON keywords FOR DELETE USING (
-  listing_id IN (SELECT id FROM product_listings WHERE user_id = auth.uid())
-);
+-- Note: No need for keywords table RLS policies as keywords are stored directly in the component tables
 ```
 
 ## Phase 2: Schema and Server Functions Updates

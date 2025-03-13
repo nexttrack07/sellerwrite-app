@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '~/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -9,15 +9,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export interface KeywordUsage {
   keyword: string
-  usedIn?: {
-    title?: boolean
-    features?: boolean
-    description?: boolean
+  usedIn: {
+    title: boolean
+    features: boolean
+    description: boolean
   }
 }
 
 export interface KeywordsProps {
-  keywords: string[] | KeywordUsage[]
+  // We'll use the listing components directly to extract keywords
+  title?: { keywords_used?: string[] | null }
+  features?: { keywords_used?: string[] | null }
+  description?: { keywords_used?: string[] | null }
   onAddKeyword: (keyword: string) => void
   onRemoveKeyword: (keyword: string) => void
   onKeywordClick?: (keyword: string) => void
@@ -27,7 +30,9 @@ export interface KeywordsProps {
 }
 
 export function Keywords({
-  keywords = [],
+  title,
+  features,
+  description,
   onAddKeyword,
   onRemoveKeyword,
   onKeywordClick,
@@ -38,6 +43,57 @@ export function Keywords({
   const [keywordInput, setKeywordInput] = useState('')
   const [isEditMode, setIsEditMode] = useState(false)
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
+
+  // Derive keyword usage from the components
+  const keywordUsage = useMemo(() => {
+    const result: KeywordUsage[] = []
+    const keywordMap = new Map<string, KeywordUsage>()
+
+    // Process title keywords
+    const titleKeywords = title?.keywords_used || []
+    titleKeywords.forEach(keyword => {
+      if (!keywordMap.has(keyword)) {
+        keywordMap.set(keyword, {
+          keyword,
+          usedIn: { title: true, features: false, description: false }
+        })
+      } else {
+        const usage = keywordMap.get(keyword)!
+        usage.usedIn.title = true
+      }
+    })
+
+    // Process features keywords
+    const featuresKeywords = features?.keywords_used || []
+    featuresKeywords.forEach(keyword => {
+      if (!keywordMap.has(keyword)) {
+        keywordMap.set(keyword, {
+          keyword,
+          usedIn: { title: false, features: true, description: false }
+        })
+      } else {
+        const usage = keywordMap.get(keyword)!
+        usage.usedIn.features = true
+      }
+    })
+
+    // Process description keywords
+    const descriptionKeywords = description?.keywords_used || []
+    descriptionKeywords.forEach(keyword => {
+      if (!keywordMap.has(keyword)) {
+        keywordMap.set(keyword, {
+          keyword,
+          usedIn: { title: false, features: false, description: true }
+        })
+      } else {
+        const usage = keywordMap.get(keyword)!
+        usage.usedIn.description = true
+      }
+    })
+
+    // Convert map to array
+    return Array.from(keywordMap.values())
+  }, [title, features, description])
 
   const handleAddKeyword = () => {
     if (keywordInput.trim()) {
@@ -56,16 +112,11 @@ export function Keywords({
     setSelectedKeyword(keyword === selectedKeyword ? null : keyword)
     onKeywordClick?.(keyword)
   }
-  
-  // Helper to check if a keyword is a string or KeywordUsage object
-  const isKeywordObject = (keyword: string | KeywordUsage): keyword is KeywordUsage => {
-    return typeof keyword !== 'string'
-  }
-  
-  // Get keyword string regardless of type
-  const getKeywordString = (keyword: string | KeywordUsage): string => {
-    return isKeywordObject(keyword) ? keyword.keyword : keyword
-  }
+
+  // Reset selected keyword when active component changes
+  useEffect(() => {
+    setSelectedKeyword(null)
+  }, [activeComponent])
 
   return (
     <Card>
@@ -111,48 +162,47 @@ export function Keywords({
             </div>
           </div>
         )}
-        <ul className="space-y-1">
-          {keywords.map((keywordItem, index) => {
-            const keywordString = getKeywordString(keywordItem)
-            const keywordUsage = isKeywordObject(keywordItem) ? keywordItem.usedIn : undefined
-            
-            // Determine if this keyword is used in the active component
-            const isUsedInActiveComponent = activeComponent && keywordUsage ? 
-              keywordUsage[activeComponent] : false
+        
+        {keywordUsage.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No keywords found</p>
+        ) : (
+          <ul className="space-y-1">
+            {keywordUsage.map((keywordItem, index) => {
+              // Determine if this keyword is used in the active component
+              const isUsedInActiveComponent = activeComponent && keywordItem.usedIn[activeComponent]
               
-            return (
-              <li
-                key={index}
-                onClick={() => handleKeywordClick(keywordString)}
-                className={cn(
-                  'group flex items-center justify-between py-1.5 px-3 rounded-md border transition-all',
-                  !isEditMode && 'cursor-pointer',
-                  keywordString === selectedKeyword
-                    ? 'border-blue-500 bg-primary/10'
-                    : isUsedInActiveComponent
-                      ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
-                      : 'border-border hover:border-muted-foreground hover:bg-muted',
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      'text-sm transition-colors',
-                      keywordString === selectedKeyword 
-                        ? 'text-foreground' 
-                        : isUsedInActiveComponent
-                          ? 'text-green-700 dark:text-green-400'
-                          : 'text-muted-foreground group-hover:text-foreground',
-                    )}
-                  >
-                    {keywordString}
-                  </span>
-                  
-                  {/* Show usage indicators if we have that data */}
-                  {keywordUsage && (
+              return (
+                <li
+                  key={index}
+                  onClick={() => handleKeywordClick(keywordItem.keyword)}
+                  className={cn(
+                    'group flex items-center justify-between py-1.5 px-3 rounded-md border transition-all',
+                    !isEditMode && 'cursor-pointer',
+                    keywordItem.keyword === selectedKeyword
+                      ? 'border-blue-500 bg-primary/10'
+                      : isUsedInActiveComponent
+                        ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
+                        : 'border-border hover:border-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'text-sm transition-colors',
+                        keywordItem.keyword === selectedKeyword 
+                          ? 'text-foreground' 
+                          : isUsedInActiveComponent
+                            ? 'text-green-700 dark:text-green-400'
+                            : 'text-muted-foreground group-hover:text-foreground',
+                      )}
+                    >
+                      {keywordItem.keyword}
+                    </span>
+                    
+                    {/* Show usage indicators */}
                     <div className="flex gap-1">
                       <TooltipProvider>
-                        {keywordUsage.title && (
+                        {keywordItem.usedIn.title && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge 
@@ -170,7 +220,7 @@ export function Keywords({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {keywordUsage.features && (
+                        {keywordItem.usedIn.features && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge 
@@ -188,7 +238,7 @@ export function Keywords({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {keywordUsage.description && (
+                        {keywordItem.usedIn.description && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Badge 
@@ -208,28 +258,28 @@ export function Keywords({
                         )}
                       </TooltipProvider>
                     </div>
+                  </div>
+                  
+                  {isEditMode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation() // Prevent keyword click when removing
+                        onRemoveKeyword(keywordItem.keyword)
+                      }}
+                    >
+                      <XIcon className="h-3 w-3" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
                   )}
-                </div>
-                
-                {isEditMode && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation() // Prevent keyword click when removing
-                      onRemoveKeyword(keywordString)
-                    }}
-                  >
-                    <XIcon className="h-3 w-3" />
-                    <span className="sr-only">Remove</span>
-                  </Button>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </CardContent>
     </Card>
   )

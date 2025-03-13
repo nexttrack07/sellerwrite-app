@@ -63,10 +63,19 @@ export const fetchListingComponents = createServerFn({
     throw new Error(`Failed to fetch description: ${descriptionError.message}`);
   }
   
+  // Collect keywords from title, features, and description components
+  const titleKeywords = title?.keywords_used || [];
+  const featuresKeywords = features?.keywords_used || [];
+  const descriptionKeywords = description?.keywords_used || [];
+  
+  // Combine all keywords and remove duplicates
+  const allKeywords = [...new Set([...titleKeywords, ...featuresKeywords, ...descriptionKeywords])];
+  
   return {
     listing,
     title: title || null,
     features: features || null,
-    description: description || null
+    description: description || null,
+    keywords: allKeywords
   };
 });

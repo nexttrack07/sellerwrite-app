@@ -130,23 +130,7 @@ export const generateListing = createServerFn({
         throw new Error(`Failed to create listing: ${listingError.message}`)
       }
 
-      // Insert keywords into the keywords table
-      if (data.keywords && data.keywords.length > 0) {
-        const keywordsToInsert = data.keywords.map(keyword => ({
-          listing_id: listingData.id,
-          keyword,
-          is_selected: true
-        }))
-        
-        const { error: keywordsError } = await supabase
-          .from('keywords')
-          .insert(keywordsToInsert)
-        
-        if (keywordsError) {
-          console.error('Failed to insert keywords:', keywordsError)
-          // Continue anyway since we have the listing ID
-        }
-      }
+      // Keywords will be stored in the keywords_used column of each component (title, features, description)
 
       // Insert title component
       const { data: titleData, error: titleError } = await supabase
