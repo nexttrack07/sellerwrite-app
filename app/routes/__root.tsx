@@ -13,6 +13,7 @@ import { Button } from '~/components/ui/button'
 import { LogOutIcon, UserIcon } from 'lucide-react'
 import { Toaster } from '~/components/ui/sonner'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeToggle } from '~/components/ThemeToggle'
 
 const queryClient = new QueryClient()
 
@@ -102,8 +103,28 @@ function RootComponent() {
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
 
+  // Get theme from localStorage on initial render
+  const [theme, setTheme] = React.useState<string>('')
+
+  React.useEffect(() => {
+    // Get the theme from localStorage or use the default
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    setTheme(savedTheme)
+
+    // Listen for theme changes from the ThemeSwitcher component
+    const handleThemeChange = (e: CustomEvent) => {
+      setTheme(e.detail)
+    }
+
+    window.addEventListener('themechange', handleThemeChange as EventListener)
+
+    return () => {
+      window.removeEventListener('themechange', handleThemeChange as EventListener)
+    }
+  }, [])
+
   return (
-    <html className="dark">
+    <html data-theme={theme || 'light'} lang="en">
       <head>
         <HeadContent />
       </head>
@@ -146,7 +167,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Create
           </Link>
-          <div className="ml-auto">
+          <div className="flex items-center gap-4 ml-auto">
+            <ThemeToggle />
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -40,7 +40,7 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                       ? 'border-primary bg-primary text-primary-foreground'
                       : isCompleted
                         ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-muted-foreground/30 bg-background text-muted-foreground',
+                        : 'border-opacity-30 bg-base-100 text-opacity-50',
                   )}
                 >
                   {isCompleted ? <Check className="w-5 h-5" /> : <span>{index + 1}</span>}
@@ -60,14 +60,17 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                 <span
                   className={cn(
                     'block text-sm font-medium',
-                    isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground',
+                    isActive || isCompleted ? 'text-base-content' : 'text-base-content text-opacity-70',
                   )}
                 >
                   {step.title}
                 </span>
                 {step.description && (
                   <p
-                    className={cn('text-sm md:block', isActive ? 'text-muted-foreground' : 'text-muted-foreground/70')}
+                    className={cn(
+                      'text-sm md:block',
+                      isActive ? 'text-base-content text-opacity-70' : 'text-base-content text-opacity-50',
+                    )}
                   >
                     {step.description}
                   </p>

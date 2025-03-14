@@ -47,8 +47,8 @@ function RadioCard({ option, isSelected, onSelect, size = 'default' }: RadioCard
       className={cn(
         'relative flex flex-col rounded-lg border cursor-pointer transition-all',
         size === 'small' ? 'p-2 text-sm' : 'p-4',
-        'hover:border-primary/50 hover:shadow-sm',
-        isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card',
+        'hover:border-primary hover:shadow-sm',
+        isSelected ? 'border-primary bg-primary bg-opacity-5 shadow-sm' : 'border-base-300 bg-base-100',
       )}
     >
       {isSelected && (
@@ -62,7 +62,7 @@ function RadioCard({ option, isSelected, onSelect, size = 'default' }: RadioCard
         <h3 className={cn('font-medium', size === 'small' ? 'text-sm' : '')}>{option.title}</h3>
       </div>
 
-      {size !== 'small' && <p className="text-sm text-muted-foreground">{option.description}</p>}
+      {size !== 'small' && <p className="text-sm text-base-content text-opacity-70">{option.description}</p>}
     </div>
   )
 }

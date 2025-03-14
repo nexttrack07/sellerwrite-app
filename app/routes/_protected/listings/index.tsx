@@ -95,7 +95,7 @@ function ListingsComponent() {
           </div>
         </Card>
       ) : (
-        <div className="rounded-md border bg-card">
+        <div className="rounded-md border bg-base-100">
           <ListingStackedList listings={listings} />
         </div>
       )}

@@ -54,7 +54,7 @@ const HighlightedText = ({ text, keyword }: { text: string; keyword: string | nu
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === keyword.toLowerCase() ? (
-          <span key={i} className="bg-yellow-100 dark:bg-teal-700 rounded px-0.5">
+          <span key={i} className="bg-primary/10 text-primary-focus font-medium rounded px-0.5">
             {part}
           </span>
         ) : (

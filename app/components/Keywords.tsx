@@ -4,6 +4,7 @@ import { Input } from '~/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { XIcon, EyeIcon, PencilIcon, Loader2, RefreshCw } from 'lucide-react'
 import { cn } from '~/utils'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -27,6 +28,7 @@ export interface KeywordsProps {
   onReExtract?: () => void
   isReExtracting?: boolean
   activeComponent?: 'title' | 'features' | 'description' | null
+  maxHeight?: string | number
 }
 
 export function Keywords({
@@ -39,6 +41,7 @@ export function Keywords({
   onReExtract,
   isReExtracting,
   activeComponent,
+  maxHeight = '600px',
 }: KeywordsProps) {
   const [keywordInput, setKeywordInput] = useState('')
   const [isEditMode, setIsEditMode] = useState(false)
@@ -103,9 +106,25 @@ export function Keywords({
       })
     }
 
-    // Convert map to array and sort alphabetically
-    return Array.from(keywordMap.values()).sort((a, b) => a.keyword.localeCompare(b.keyword))
-  }, [title, features, description])
+    // Convert map to array
+    const keywordsArray = Array.from(keywordMap.values())
+
+    // Sort keywords: first by whether they're used in the active component, then alphabetically
+    return keywordsArray.sort((a, b) => {
+      // If there's an active component, prioritize keywords used in that component
+      if (activeComponent) {
+        const aUsedInActive = a.usedIn[activeComponent]
+        const bUsedInActive = b.usedIn[activeComponent]
+
+        if (aUsedInActive && !bUsedInActive) return -1
+        if (!aUsedInActive && bUsedInActive) return 1
+      }
+
+      // If both keywords have the same priority (both used or both not used in active component),
+      // sort alphabetically
+      return a.keyword.localeCompare(b.keyword)
+    })
+  }, [title, features, description, activeComponent])
 
   // For debugging
   useEffect(() => {
@@ -186,122 +205,139 @@ export function Keywords({
         {keywordUsage.length === 0 ? (
           <p className="text-sm text-muted-foreground">No keywords found</p>
         ) : (
-          <ul className="space-y-1">
-            {keywordUsage.map((keywordItem, index) => {
-              // Determine if this keyword is used in the active component
-              const isUsedInActiveComponent = activeComponent && keywordItem.usedIn[activeComponent]
+          <div
+            className="overflow-y-auto scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-base-100 pr-1"
+            style={{ maxHeight }}
+          >
+            <AnimatePresence initial={false}>
+              <motion.ul className="space-y-1">
+                {keywordUsage.map((keywordItem, index) => {
+                  // Determine if this keyword is used in the active component
+                  const isUsedInActiveComponent = activeComponent && keywordItem.usedIn[activeComponent]
 
-              return (
-                <li
-                  key={index}
-                  onClick={() => handleKeywordClick(keywordItem.keyword)}
-                  className={cn(
-                    'group flex items-center justify-between py-1.5 px-3 rounded-md border transition-all',
-                    !isEditMode && 'cursor-pointer',
-                    keywordItem.keyword === selectedKeyword
-                      ? 'border-blue-500 bg-primary/10'
-                      : isUsedInActiveComponent
-                        ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
-                        : 'border-border hover:border-muted-foreground hover:bg-muted',
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
+                  return (
+                    <motion.li
+                      key={keywordItem.keyword}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 30,
+                        opacity: { duration: 0.2 },
+                      }}
+                      onClick={() => handleKeywordClick(keywordItem.keyword)}
                       className={cn(
-                        'text-sm transition-colors',
+                        'group flex items-center justify-between py-1.5 px-3 rounded-md border transition-all',
+                        !isEditMode && 'cursor-pointer',
                         keywordItem.keyword === selectedKeyword
-                          ? 'text-foreground'
+                          ? 'border-primary bg-primary/5'
                           : isUsedInActiveComponent
-                            ? 'text-green-700 dark:text-green-400'
-                            : 'text-muted-foreground group-hover:text-foreground',
+                            ? 'border-primary bg-primary/5'
+                            : 'border hover:border-muted-foreground hover:bg-muted',
                       )}
                     >
-                      {keywordItem.keyword}
-                    </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'text-sm transition-colors',
+                            keywordItem.keyword === selectedKeyword
+                              ? 'text-foreground'
+                              : isUsedInActiveComponent
+                                ? 'text-primary'
+                                : 'text-muted-foreground group-hover:text-foreground',
+                          )}
+                        >
+                          {keywordItem.keyword}
+                        </span>
 
-                    {/* Show usage indicators */}
-                    <div className="flex gap-1">
-                      <TooltipProvider>
-                        {keywordItem.usedIn.title && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'h-4 px-1 text-[10px]',
-                                  activeComponent === 'title' &&
-                                    'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
-                                )}
-                              >
-                                T
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Used in Title</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {keywordItem.usedIn.features && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'h-4 px-1 text-[10px]',
-                                  activeComponent === 'features' &&
-                                    'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
-                                )}
-                              >
-                                F
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Used in Features</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {keywordItem.usedIn.description && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'h-4 px-1 text-[10px]',
-                                  activeComponent === 'description' &&
-                                    'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
-                                )}
-                              >
-                                D
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Used in Description</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </TooltipProvider>
-                    </div>
-                  </div>
+                        {/* Show usage indicators */}
+                        <div className="flex gap-1">
+                          <TooltipProvider>
+                            {keywordItem.usedIn.title && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'h-4 px-1 text-[10px]',
+                                      activeComponent === 'title' &&
+                                        'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
+                                    )}
+                                  >
+                                    T
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Used in Title</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {keywordItem.usedIn.features && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'h-4 px-1 text-[10px]',
+                                      activeComponent === 'features' &&
+                                        'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
+                                    )}
+                                  >
+                                    F
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Used in Features</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {keywordItem.usedIn.description && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'h-4 px-1 text-[10px]',
+                                      activeComponent === 'description' &&
+                                        'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
+                                    )}
+                                  >
+                                    D
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Used in Description</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TooltipProvider>
+                        </div>
+                      </div>
 
-                  {isEditMode && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation() // Prevent keyword click when removing
-                        onRemoveKeyword(keywordItem.keyword)
-                      }}
-                    >
-                      <XIcon className="h-3 w-3" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+                      {isEditMode && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation() // Prevent keyword click when removing
+                            onRemoveKeyword(keywordItem.keyword)
+                          }}
+                        >
+                          <XIcon className="h-3 w-3" />
+                          <span className="sr-only">Remove</span>
+                        </Button>
+                      )}
+                    </motion.li>
+                  )
+                })}
+              </motion.ul>
+            </AnimatePresence>
+          </div>
         )}
       </CardContent>
     </Card>

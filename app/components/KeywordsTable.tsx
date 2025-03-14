@@ -69,7 +69,7 @@ export function KeywordsTable({ keywords }: KeywordsTableProps) {
         <div className="rounded-md border h-[450px]">
           <div className="h-full overflow-auto">
             <Table>
-              <TableHeader className="sticky top-0 bg-card z-10">
+              <TableHeader className="sticky top-0 bg-base-100 z-10">
                 <TableRow>
                   <TableHead className="w-[50%]">Keyword</TableHead>
                   <TableHead>Volume</TableHead>
