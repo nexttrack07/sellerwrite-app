@@ -165,62 +165,135 @@ function ListingDetailsPage() {
         throw new Error('No listing data available')
       }
 
-      // Extract keywords from each ASIN
+      console.log('Starting keyword extraction')
+      console.log('Current title:', listingQuery.data.title)
+      console.log('Current features:', listingQuery.data.features)
+      console.log('Current description:', listingQuery.data.description)
+
       const extractedKeywords = new Set<string>()
 
-      for (const asin of listingQuery.data.listing.asins || []) {
-        const result = await extractKeywordsFn({
-          data: {
-            title: listingQuery.data.title?.content,
-            description: listingQuery.data.description?.content,
-            bulletPoints: listingQuery.data.features?.content,
-          },
-        })
+      // Extract keywords from the title
+      const titleResult = await extractKeywordsFn({
+        data: {
+          content: listingQuery.data.title?.content,
+        },
+      })
 
-        if (result.success && result.keywords) {
-          result.keywords.forEach((keyword: { keyword: string }) => {
-            extractedKeywords.add(keyword.keyword)
-          })
-        }
+      if (titleResult.success && titleResult.keywords) {
+        titleResult.keywords.forEach((keyword: { keyword: string }) => {
+          extractedKeywords.add(keyword.keyword)
+        })
+      }
+
+      // Extract keywords from the features
+      const featuresResult = await extractKeywordsFn({
+        data: {
+          content: listingQuery.data.features?.content.join(' '),
+        },
+      })
+
+      if (featuresResult.success && featuresResult.keywords) {
+        featuresResult.keywords.forEach((keyword: { keyword: string }) => {
+          extractedKeywords.add(keyword.keyword)
+        })
+      }
+
+      // Extract keywords from the description
+      const descriptionResult = await extractKeywordsFn({
+        data: {
+          content: listingQuery.data.description?.content,
+        },
+      })
+
+      if (descriptionResult.success && descriptionResult.keywords) {
+        descriptionResult.keywords.forEach((keyword: { keyword: string }) => {
+          extractedKeywords.add(keyword.keyword)
+        })
       }
 
       // Update the title, features, and description with the new keywords
       const keywordsArray = Array.from(extractedKeywords)
-      
-      // Update title if it exists
-      if (listingQuery.data.title?.id) {
-        await updateTitleFn({
-          data: {
-            id: listingQuery.data.title.id,
-            keywords_used: keywordsArray,
-          },
-        })
-      }
-      
-      // Update features if they exist
-      if (listingQuery.data.features?.id) {
-        await updateFeaturesFn({
-          data: {
-            id: listingQuery.data.features.id,
-            keywords_used: keywordsArray,
-          },
-        })
-      }
-      
-      // Update description if it exists
-      if (listingQuery.data.description?.id) {
-        await updateDescriptionFn({
-          data: {
-            id: listingQuery.data.description.id,
-            keywords_used: keywordsArray,
-          },
-        })
+
+      // Track successful updates
+      const updates: { component: string; success: boolean }[] = []
+
+      try {
+        // Update title if it exists
+        if (listingQuery.data.title?.id) {
+          const titleUpdateResult = await updateTitleFn({
+            data: {
+              listing_id: listingQuery.data.title.listing_id,
+              content: listingQuery.data.title?.content,
+              keywords_used: titleResult.keywords?.map((keyword) => keyword.keyword),
+            },
+          })
+          console.log('Title update result:', titleUpdateResult)
+          updates.push({ component: 'title', success: !!titleUpdateResult })
+        }
+      } catch (error) {
+        console.error('Failed to update title keywords:', error)
+        updates.push({ component: 'title', success: false })
       }
 
-      return { success: true }
+      try {
+        // Update features if they exist
+        if (listingQuery.data.features?.id) {
+          const featuresUpdateResult = await updateFeaturesFn({
+            data: {
+              listing_id: listingQuery.data.features.listing_id,
+              content: listingQuery.data.features?.content,
+              keywords_used: featuresResult.keywords?.map((k) => k.keyword),
+            },
+          })
+          console.log('Features update result:', featuresUpdateResult)
+          updates.push({ component: 'features', success: !!featuresUpdateResult })
+        }
+      } catch (error) {
+        console.error('Failed to update features keywords:', error)
+        updates.push({ component: 'features', success: false })
+      }
+
+      try {
+        // Update description if it exists
+        if (listingQuery.data.description?.id) {
+          const descriptionUpdateResult = await updateDescriptionFn({
+            data: {
+              listing_id: listingQuery.data.description.listing_id,
+              content: listingQuery.data.description?.content,
+              keywords_used: descriptionResult.keywords?.map((k) => k.keyword),
+            },
+          })
+          console.log('Description update result:', descriptionUpdateResult)
+          updates.push({ component: 'description', success: !!descriptionUpdateResult })
+        }
+      } catch (error) {
+        console.error('Failed to update description keywords:', error)
+        updates.push({ component: 'description', success: false })
+      }
+
+      // Check if any updates were successful
+      const anySuccessful = updates.some((update) => update.success)
+      if (!anySuccessful && updates.length > 0) {
+        throw new Error('Failed to update any components with new keywords')
+      }
+
+      return {
+        success: true,
+        updates,
+        keywordsCount: keywordsArray.length,
+      }
     },
-    onSuccess: () => {
-      toast.success('Keywords re-extracted successfully')
+    onSuccess: (result) => {
+      // Create a more detailed success message
+      const successComponents = result.updates
+        .filter((u) => u.success)
+        .map((u) => u.component)
+        .join(', ')
+
+      toast.success(`${result.keywordsCount} keywords extracted and applied to ${successComponents}`, {
+        duration: 5000,
+      })
+
       // Invalidate and refetch the listing query
       queryClient.invalidateQueries({ queryKey: ['listing-components', id] })
     },
@@ -362,7 +435,7 @@ function ListingDetailsPage() {
               features: listingQuery.data?.features,
               description: listingQuery.data?.description,
               style: listingQuery.data?.listing?.style,
-              tone: listingQuery.data?.listing?.tone
+              tone: listingQuery.data?.listing?.tone,
             }}
             onAnalyzeTitle={handleAnalyzeTitle}
             onAnalyzeFeatures={handleAnalyzeFeatures}
@@ -375,6 +448,8 @@ function ListingDetailsPage() {
             isAnalyzingDescription={analyzeDescriptionMutation.isPending}
             hideAnalyzeButtons={true}
             highlightedKeyword={highlightedKeyword}
+            onSelect={setActiveComponent}
+            activeComponent={activeComponent}
           />
         </div>
 

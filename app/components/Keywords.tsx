@@ -49,51 +49,71 @@ export function Keywords({
     const result: KeywordUsage[] = []
     const keywordMap = new Map<string, KeywordUsage>()
 
+    // Helper function to safely check if a keyword is in an array
+    const isKeywordInArray = (keyword: string, arr?: string[] | null): boolean => {
+      if (!arr || !Array.isArray(arr)) return false
+      return arr.includes(keyword)
+    }
+
     // Process title keywords
     const titleKeywords = title?.keywords_used || []
-    titleKeywords.forEach(keyword => {
-      if (!keywordMap.has(keyword)) {
-        keywordMap.set(keyword, {
-          keyword,
-          usedIn: { title: true, features: false, description: false }
-        })
-      } else {
-        const usage = keywordMap.get(keyword)!
-        usage.usedIn.title = true
-      }
-    })
+    if (Array.isArray(titleKeywords)) {
+      titleKeywords.forEach((keyword) => {
+        if (!keywordMap.has(keyword)) {
+          keywordMap.set(keyword, {
+            keyword,
+            usedIn: { title: true, features: false, description: false },
+          })
+        } else {
+          const usage = keywordMap.get(keyword)!
+          usage.usedIn.title = true
+        }
+      })
+    }
 
     // Process features keywords
     const featuresKeywords = features?.keywords_used || []
-    featuresKeywords.forEach(keyword => {
-      if (!keywordMap.has(keyword)) {
-        keywordMap.set(keyword, {
-          keyword,
-          usedIn: { title: false, features: true, description: false }
-        })
-      } else {
-        const usage = keywordMap.get(keyword)!
-        usage.usedIn.features = true
-      }
-    })
+    if (Array.isArray(featuresKeywords)) {
+      featuresKeywords.forEach((keyword) => {
+        if (!keywordMap.has(keyword)) {
+          keywordMap.set(keyword, {
+            keyword,
+            usedIn: { title: false, features: true, description: false },
+          })
+        } else {
+          const usage = keywordMap.get(keyword)!
+          usage.usedIn.features = true
+        }
+      })
+    }
 
     // Process description keywords
     const descriptionKeywords = description?.keywords_used || []
-    descriptionKeywords.forEach(keyword => {
-      if (!keywordMap.has(keyword)) {
-        keywordMap.set(keyword, {
-          keyword,
-          usedIn: { title: false, features: false, description: true }
-        })
-      } else {
-        const usage = keywordMap.get(keyword)!
-        usage.usedIn.description = true
-      }
-    })
+    if (Array.isArray(descriptionKeywords)) {
+      descriptionKeywords.forEach((keyword) => {
+        if (!keywordMap.has(keyword)) {
+          keywordMap.set(keyword, {
+            keyword,
+            usedIn: { title: false, features: false, description: true },
+          })
+        } else {
+          const usage = keywordMap.get(keyword)!
+          usage.usedIn.description = true
+        }
+      })
+    }
 
-    // Convert map to array
-    return Array.from(keywordMap.values())
+    // Convert map to array and sort alphabetically
+    return Array.from(keywordMap.values()).sort((a, b) => a.keyword.localeCompare(b.keyword))
   }, [title, features, description])
+
+  // For debugging
+  useEffect(() => {
+    console.log('Title keywords:', title?.keywords_used)
+    console.log('Features keywords:', features?.keywords_used)
+    console.log('Description keywords:', description?.keywords_used)
+    console.log('Processed keyword usage:', keywordUsage)
+  }, [title, features, description, keywordUsage])
 
   const handleAddKeyword = () => {
     if (keywordInput.trim()) {
@@ -162,7 +182,7 @@ export function Keywords({
             </div>
           </div>
         )}
-        
+
         {keywordUsage.length === 0 ? (
           <p className="text-sm text-muted-foreground">No keywords found</p>
         ) : (
@@ -170,7 +190,7 @@ export function Keywords({
             {keywordUsage.map((keywordItem, index) => {
               // Determine if this keyword is used in the active component
               const isUsedInActiveComponent = activeComponent && keywordItem.usedIn[activeComponent]
-              
+
               return (
                 <li
                   key={index}
@@ -189,8 +209,8 @@ export function Keywords({
                     <span
                       className={cn(
                         'text-sm transition-colors',
-                        keywordItem.keyword === selectedKeyword 
-                          ? 'text-foreground' 
+                        keywordItem.keyword === selectedKeyword
+                          ? 'text-foreground'
                           : isUsedInActiveComponent
                             ? 'text-green-700 dark:text-green-400'
                             : 'text-muted-foreground group-hover:text-foreground',
@@ -198,18 +218,19 @@ export function Keywords({
                     >
                       {keywordItem.keyword}
                     </span>
-                    
+
                     {/* Show usage indicators */}
                     <div className="flex gap-1">
                       <TooltipProvider>
                         {keywordItem.usedIn.title && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={cn(
-                                  "h-4 px-1 text-[10px]",
-                                  activeComponent === 'title' && "bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                                  'h-4 px-1 text-[10px]',
+                                  activeComponent === 'title' &&
+                                    'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
                                 )}
                               >
                                 T
@@ -223,11 +244,12 @@ export function Keywords({
                         {keywordItem.usedIn.features && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={cn(
-                                  "h-4 px-1 text-[10px]",
-                                  activeComponent === 'features' && "bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                                  'h-4 px-1 text-[10px]',
+                                  activeComponent === 'features' &&
+                                    'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
                                 )}
                               >
                                 F
@@ -241,11 +263,12 @@ export function Keywords({
                         {keywordItem.usedIn.description && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={cn(
-                                  "h-4 px-1 text-[10px]",
-                                  activeComponent === 'description' && "bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                                  'h-4 px-1 text-[10px]',
+                                  activeComponent === 'description' &&
+                                    'bg-green-100 border-green-500 text-green-700 dark:bg-green-950/30 dark:text-green-400',
                                 )}
                               >
                                 D
@@ -259,7 +282,7 @@ export function Keywords({
                       </TooltipProvider>
                     </div>
                   </div>
-                  
+
                   {isEditMode && (
                     <Button
                       type="button"

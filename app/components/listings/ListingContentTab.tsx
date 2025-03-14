@@ -42,6 +42,8 @@ interface ListingContentTabProps {
   isAnalyzingDescription?: boolean
   hideAnalyzeButtons?: boolean
   highlightedKeyword?: string | null
+  activeComponent?: 'title' | 'features' | 'description' | null
+  onSelect?: (component: 'title' | 'features' | 'description') => void
 }
 
 const HighlightedText = ({ text, keyword }: { text: string; keyword: string | null | undefined }) => {
@@ -76,10 +78,18 @@ export function ListingContentTab({
   isAnalyzingDescription = false,
   hideAnalyzeButtons = false,
   highlightedKeyword,
+  activeComponent,
+  onSelect,
 }: ListingContentTabProps) {
   return (
     <div className="grid gap-6">
-      <Card className="border-2 hover:border-primary/50 transition-colors">
+      <Card
+        onClick={() => onSelect && onSelect('title')}
+        className={cn(
+          'border-2 transition-colors cursor-pointer',
+          activeComponent === 'title' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
+        )}
+      >
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle>Product Title</CardTitle>
           <div className="flex space-x-2">
@@ -92,9 +102,9 @@ export function ListingContentTab({
         </CardHeader>
         <CardContent>
           <p className="text-lg font-medium">
-            <HighlightedText 
-              text={listing.title?.content as string || 'No title available'} 
-              keyword={highlightedKeyword} 
+            <HighlightedText
+              text={(listing.title?.content as string) || 'No title available'}
+              keyword={highlightedKeyword}
             />
           </p>
         </CardContent>
@@ -117,7 +127,13 @@ export function ListingContentTab({
         )}
       </Card>
 
-      <Card className="border-2 hover:border-primary/50 transition-colors">
+      <Card
+        onClick={() => onSelect && onSelect('features')}
+        className={cn(
+          'border-2 transition-colors cursor-pointer',
+          activeComponent === 'features' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
+        )}
+      >
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle>Bullet Points</CardTitle>
           <div className="flex space-x-2">
@@ -130,7 +146,7 @@ export function ListingContentTab({
         </CardHeader>
         <CardContent>
           <ul className="list-disc pl-5 space-y-2">
-            {(listing.features?.content as string[] || []).map((bullet, index) => (
+            {((listing.features?.content as string[]) || []).map((bullet, index) => (
               <li key={index}>
                 <HighlightedText text={bullet} keyword={highlightedKeyword} />
               </li>
@@ -159,7 +175,13 @@ export function ListingContentTab({
         )}
       </Card>
 
-      <Card className="border-2 hover:border-primary/50 transition-colors">
+      <Card
+        onClick={() => onSelect && onSelect('description')}
+        className={cn(
+          'border-2 transition-colors cursor-pointer',
+          activeComponent === 'description' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
+        )}
+      >
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle>Description</CardTitle>
           <div className="flex space-x-2">
@@ -172,9 +194,9 @@ export function ListingContentTab({
         </CardHeader>
         <CardContent>
           <p className="whitespace-pre-wrap">
-            <HighlightedText 
-              text={listing.description?.content as string || 'No description available'} 
-              keyword={highlightedKeyword} 
+            <HighlightedText
+              text={(listing.description?.content as string) || 'No description available'}
+              keyword={highlightedKeyword}
             />
           </p>
         </CardContent>

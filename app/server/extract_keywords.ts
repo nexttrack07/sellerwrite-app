@@ -54,49 +54,18 @@ export const extractKeywords = createServerFn()
   .validator((d: unknown) =>
     z
       .object({
-        title: z.string(),
-        description: z.string().optional(),
-        bulletPoints: z.array(z.string()).optional(),
+        content: z.string(),
       })
       .parse(d),
   )
-  .handler(async ({ data: { title, description, bulletPoints } }) => {
+  .handler(async ({ data: { content } }) => {
     try {
-      function buildPrompt(productData: { title: string; description: string; bulletPoints: string[] }) {
+      function buildPrompt(content: string) {
         return `
-Extract relevant keywords from the following Amazon product information. Focus on descriptive, generic terms that shoppers would use to find this type of product.
 
-IMPORTANT RULES:
-1. DO NOT include:
-   - Brand names, company names, or product line names
-   - Trademarked terms (including those with ™, ®, © symbols)
-   - Proprietary model numbers or product codes
-   - Competitor brand names
-   - Product-specific unique identifiers
+Product details:
+${content}
 
-2. Keyword Guidelines:
-   - Each keyword should be a unique concept
-   - DO NOT repeat the same base term with different modifiers
-   - Use the most specific/complete version of a term
-   - Avoid redundant variations of the same concept
-
-Examples:
-BAD (redundant):
-- phone case, clear phone case, magnetic phone case
-- puzzle, landscape puzzle, scenery puzzle
-
-GOOD (unique concepts):
-- phone case, magnetic mount, shock protection
-- jigsaw puzzle, landscape scenery, memory improvement
-
-Product Title:
-${productData.title}
-
-Product Description:
-${productData.description}
-
-Product Features:
-${productData.bulletPoints.join('\n')}
 
 Analyze the text above and extract a list of unique, non-redundant keywords that potential customers might use to search for this type of product on Amazon. Focus on terms that describe:
 - Core product type (single most specific term)
@@ -107,6 +76,15 @@ Analyze the text above and extract a list of unique, non-redundant keywords that
 - Target audience or user demographics
 
 Each term should represent a distinct concept without repeating base terms.
+
+Examples:
+BAD (redundant):
+- phone case, clear phone case, magnetic phone case // phone case is redundant
+- puzzle, landscape puzzle, scenery puzzle // puzzle is redundant
+
+GOOD (unique concepts):
+- phone case, magnetic mount, shock protection
+- jigsaw puzzle, landscape scenery, memory improvement
 
 Format your response as a JSON array of keyword objects with the following structure:
 [
@@ -121,7 +99,7 @@ Format your response as a JSON array of keyword objects with the following struc
       }
 
       // Prepare the prompt with the modified prompt
-      const prompt = buildPrompt({ title, description: description || '', bulletPoints: bulletPoints || [] })
+      const prompt = buildPrompt(content)
 
       // Call Claude API using the SDK with the specified model
       const message = await anthropic.messages.create({
@@ -141,10 +119,10 @@ Format your response as a JSON array of keyword objects with the following struc
       const keywordsData = JSON.parse(cleanedJson)
 
       // Extract potential brand names from the product title
-      const potentialBrands = title
+      const potentialBrands = content
         .split(' ')
         .slice(0, 2)
-        .filter((word) => word.length > 2)
+        .filter((word: string) => word.length > 2)
 
       // Filter out brand terms
       const filteredKeywords = filterBrandTerms(keywordsData, potentialBrands)
