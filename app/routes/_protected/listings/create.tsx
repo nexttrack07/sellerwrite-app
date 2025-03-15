@@ -667,10 +667,10 @@ export const GenerationStep = () => {
 
       // Show success message
       toast.success('Listing created successfully!')
-      
+
       // Reset the store
       resetStore()
-      
+
       // Navigate to the listing detail page
       if (result?.listingId) {
         navigate({ to: '/listings/$id', params: { id: result.listingId.toString() } })

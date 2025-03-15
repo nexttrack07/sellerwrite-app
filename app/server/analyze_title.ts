@@ -22,24 +22,36 @@ export const analyzeTitle = createServerFn({
       throw new Error('User not authenticated')
     }
 
-    // Fetch the title
+    // Fetch the title first
     const { data: title, error: titleError } = await supabase
       .from('titles')
-      .select('*, product_listings!inner(user_id, asins)')
+      .select('*, listing_id')
       .eq('id', data.title_id)
+      .eq('is_current', true)
       .single()
 
     if (titleError) {
       throw new Error(`Failed to fetch title: ${titleError.message}`)
     }
 
+    // Now fetch the product listing separately
+    const { data: productListing, error: productListingError } = await supabase
+      .from('product_listings')
+      .select('user_id, asins')
+      .eq('id', title.listing_id)
+      .single()
+
+    if (productListingError) {
+      throw new Error(`Failed to fetch product listing: ${productListingError.message}`)
+    }
+
     // Verify user owns this title
-    if (title.product_listings.user_id !== userData.user.id) {
+    if (productListing.user_id !== userData.user.id) {
       throw new Error('Unauthorized')
     }
 
     // Analyze the title using Anthropic API
-    const asin = data.asin || (title.product_listings.asins && title.product_listings.asins[0]) || ''
+    const asin = data.asin || (productListing.asins && productListing.asins[0]) || ''
     const analysis = await analyzeTitleWithAI(title.content, asin)
 
     // Update the title with the analysis

@@ -22,24 +22,36 @@ export const analyzeFeatures = createServerFn({
       throw new Error('User not authenticated')
     }
 
-    // Fetch the features
+    // Fetch the features first
     const { data: features, error: featuresError } = await supabase
       .from('features')
-      .select('*, product_listings!inner(user_id, asins)')
+      .select('*, listing_id')
       .eq('id', data.features_id)
+      .eq('is_current', true)
       .single()
 
     if (featuresError) {
       throw new Error(`Failed to fetch features: ${featuresError.message}`)
     }
 
+    // Now fetch the product listing separately
+    const { data: productListing, error: productListingError } = await supabase
+      .from('product_listings')
+      .select('user_id, asins')
+      .eq('id', features.listing_id)
+      .single()
+
+    if (productListingError) {
+      throw new Error(`Failed to fetch product listing: ${productListingError.message}`)
+    }
+
     // Verify user owns these features
-    if (features.product_listings.user_id !== userData.user.id) {
+    if (productListing.user_id !== userData.user.id) {
       throw new Error('Unauthorized')
     }
 
     // Analyze the features using Anthropic API
-    const asin = data.asin || (features.product_listings.asins && features.product_listings.asins[0]) || ''
+    const asin = data.asin || (productListing.asins && productListing.asins[0]) || ''
     const analysis = await analyzeFeaturesWithAI(features.content, asin)
 
     // Update the features with the analysis

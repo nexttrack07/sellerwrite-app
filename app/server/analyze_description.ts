@@ -22,24 +22,36 @@ export const analyzeDescription = createServerFn({
       throw new Error('User not authenticated')
     }
 
-    // Fetch the description
+    // Fetch the description first
     const { data: description, error: descriptionError } = await supabase
       .from('descriptions')
-      .select('*, product_listings!inner(user_id, asins)')
+      .select('*, listing_id')
       .eq('id', data.description_id)
+      .eq('is_current', true)
       .single()
 
     if (descriptionError) {
       throw new Error(`Failed to fetch description: ${descriptionError.message}`)
     }
 
+    // Now fetch the product listing separately
+    const { data: productListing, error: productListingError } = await supabase
+      .from('product_listings')
+      .select('user_id, asins')
+      .eq('id', description.listing_id)
+      .single()
+
+    if (productListingError) {
+      throw new Error(`Failed to fetch product listing: ${productListingError.message}`)
+    }
+
     // Verify user owns this description
-    if (description.product_listings.user_id !== userData.user.id) {
+    if (productListing.user_id !== userData.user.id) {
       throw new Error('Unauthorized')
     }
 
     // Analyze the description using Anthropic API
-    const asin = data.asin || (description.product_listings.asins && description.product_listings.asins[0]) || ''
+    const asin = data.asin || (productListing.asins && productListing.asins[0]) || ''
     const analysis = await analyzeDescriptionWithAI(description.content, asin)
 
     // Update the description with the analysis

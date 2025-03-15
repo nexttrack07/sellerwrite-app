@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Badge } from '~/components/ui/badge'
 import { toast } from 'sonner'
 import { fetchListingComponents } from '~/server/fetch_listing_components'
@@ -13,7 +13,6 @@ import { updateTitle } from '~/server/update_title'
 import { updateFeatures } from '~/server/update_features'
 import { updateDescription } from '~/server/update_description'
 import { extractKeywords } from '~/server/extract_keywords'
-import { updateListing } from '~/server/update_listing'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -44,7 +43,6 @@ function ListingDetailsPage() {
   const updateFeaturesFn = useServerFn(updateFeatures)
   const updateDescriptionFn = useServerFn(updateDescription)
   const extractKeywordsFn = useServerFn(extractKeywords)
-  const updateListingFn = useServerFn(updateListing)
 
   const listingQuery = useQuery({
     queryKey: ['listing-components', id],
@@ -149,8 +147,9 @@ function ListingDetailsPage() {
     },
     onSuccess: () => {
       toast.success('Description analyzed successfully')
-      queryClient.invalidateQueries({ queryKey: ['listing-components', id] })
-      queryClient.invalidateQueries({ queryKey: ['description-analysis', listingQuery.data?.description?.id] })
+      // queryClient.invalidateQueries({ queryKey: ['listing-components', id] })
+      // queryClient.invalidateQueries({ queryKey: ['description-analysis', listingQuery.data?.description?.id] })
+      queryClient.invalidateQueries()
     },
     onError: (error) => {
       toast.error('Failed to analyze description', {

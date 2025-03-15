@@ -9,10 +9,12 @@ interface FeatureAnalysis {
 
 interface FeaturesAnalysisTabProps {
   analysisData: {
-    overall_score: number
-    overall_analysis: string
+    score: number
+    pros: string
+    cons: string
+    recommendations: string
     keyword_usage: string
-    feature_specific: FeatureAnalysis[]
+    feature_by_feature: FeatureAnalysis[]
   }
   getScoreBadgeVariant: (score: number) => 'success' | 'warning' | 'destructive'
 }
@@ -33,28 +35,41 @@ export function FeaturesAnalysisTab({ analysisData, getScoreBadgeVariant }: Feat
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Features Analysis
-          <Badge variant={getScoreBadgeVariant(analysisData.overall_score)}>
-            Score: {analysisData.overall_score}/10
+          <Badge variant={getScoreBadgeVariant(analysisData.score)}>
+            Score: {analysisData.score}/10
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="font-semibold mb-1">Overall Analysis</h3>
-          <p className="text-sm">{analysisData.overall_analysis}</p>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+            <h3 className="font-semibold mb-1 text-green-700 dark:text-green-400">Pros</h3>
+            <p className="text-sm">{analysisData.pros}</p>
+          </div>
+          <div className="border p-3 rounded-lg bg-red-50 dark:bg-red-950/20">
+            <h3 className="font-semibold mb-1 text-red-700 dark:text-red-400">Cons</h3>
+            <p className="text-sm">{analysisData.cons}</p>
+          </div>
         </div>
+
+        <div>
+          <h3 className="font-semibold mb-1">Recommendations</h3>
+          <p className="text-sm">{analysisData.recommendations}</p>
+        </div>
+
         <div>
           <h3 className="font-semibold mb-1">Keyword Usage</h3>
           <p className="text-sm">{analysisData.keyword_usage}</p>
         </div>
-        {analysisData.feature_specific && analysisData.feature_specific.length > 0 && (
+
+        {analysisData.feature_by_feature && analysisData.feature_by_feature.length > 0 && (
           <div>
-            <h3 className="font-semibold mb-2">Feature-Specific Analysis</h3>
+            <h3 className="font-semibold mb-2">Feature-by-Feature Analysis</h3>
             <div className="space-y-3">
-              {analysisData.feature_specific.map((item, index) => (
-                <div key={index} className="border rounded-md p-3">
-                  <p className="font-medium text-sm mb-1">{item.feature}</p>
-                  <p className="text-xs text-muted-foreground">{item.analysis}</p>
+              {analysisData.feature_by_feature.map((item, index) => (
+                <div key={index} className="border rounded-md p-3 hover:bg-muted/20 transition-colors">
+                  <p className="font-medium text-sm mb-1">• {item.feature}</p>
+                  <p className="text-xs text-muted-foreground pl-4 border-l-2 border-muted-foreground/30">{item.analysis}</p>
                 </div>
               ))}
             </div>
