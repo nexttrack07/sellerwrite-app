@@ -357,16 +357,17 @@ function ListingDetailsPage() {
   }
 
   return (
-    <div className="mx-auto px-6 py-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto">
+      <div className="px-6 py-4 border-b flex items-center justify-between">
         <div className="flex items-center">
-          <Button variant="outline" size="sm" onClick={handleGoBack} className="mr-4">
-            <ArrowLeft />
-          </Button>
           <h1 className="text-2xl font-bold">Listing Details</h1>
         </div>
         <div className="flex space-x-2">
-          <Button
+          <Button variant="link" size="sm" onClick={handleGoBack} className="mr-4">
+            <ArrowLeft />
+            All Listings
+          </Button>
+          {/* <Button
             onClick={handleAnalyzeTitle}
             disabled={analyzeTitleMutation.isPending || !listingQuery.data?.title?.id}
             variant="outline"
@@ -386,13 +387,12 @@ function ListingDetailsPage() {
             variant="outline"
           >
             {analyzeDescriptionMutation.isPending ? 'Analyzing Description...' : 'Analyze Description'}
-          </Button>
+          </Button> */}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="space-y-4">
-          <Card>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
+        {/* <Card>
             <CardHeader>
               <CardTitle>ASINs</CardTitle>
             </CardHeader>
@@ -408,8 +408,9 @@ function ListingDetailsPage() {
                 )}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
+        <div className="col-span-2">
           <Keywords
             title={listingQuery.data?.title}
             features={listingQuery.data?.features}
@@ -423,7 +424,7 @@ function ListingDetailsPage() {
           />
         </div>
         {/* Left Column - Listing Content */}
-        <div className="col-span-2">
+        <div className="col-span-6">
           <ListingContentTab
             listing={{
               id: listingQuery.data?.listing?.id || 0,
@@ -453,7 +454,7 @@ function ListingDetailsPage() {
         </div>
 
         {/* Right Column - Analysis */}
-        <div className="space-y-6">
+        <div className="space-y-6 col-span-4">
           {titleAnalysisQuery.data ? (
             <TitleAnalysisTab analysisData={titleAnalysisQuery.data} getScoreBadgeVariant={getScoreBadgeVariant} />
           ) : (

@@ -82,15 +82,15 @@ export function ListingContentTab({
   onSelect,
 }: ListingContentTabProps) {
   return (
-    <div className="grid gap-6">
+    <div className="">
       <Card
         onClick={() => onSelect && onSelect('title')}
         className={cn(
-          'border-2 transition-colors cursor-pointer',
+          'border-0 border-b transition-colors cursor-pointer',
           activeComponent === 'title' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
         )}
       >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Product Title</CardTitle>
           <div className="flex space-x-2">
             {onEditTitle && (
@@ -130,11 +130,11 @@ export function ListingContentTab({
       <Card
         onClick={() => onSelect && onSelect('features')}
         className={cn(
-          'border-2 transition-colors cursor-pointer',
+          'border-0 border-b transition-colors cursor-pointer',
           activeComponent === 'features' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
         )}
       >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Bullet Points</CardTitle>
           <div className="flex space-x-2">
             {onEditFeatures && (
@@ -178,11 +178,11 @@ export function ListingContentTab({
       <Card
         onClick={() => onSelect && onSelect('description')}
         className={cn(
-          'border-2 transition-colors cursor-pointer',
+          'border-0 border-b transition-colors cursor-pointer',
           activeComponent === 'description' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
         )}
       >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Description</CardTitle>
           <div className="flex space-x-2">
             {onEditDescription && (
@@ -217,32 +217,6 @@ export function ListingContentTab({
             </Button>
           </CardFooter>
         )}
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Listing Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Marketplace</h3>
-              <p>{listing.marketplace}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Style</h3>
-              <p className="capitalize">{listing.style}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Tone</h3>
-              <p>{listing.tone}/10</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Created</h3>
-              <p>{new Date(listing.created_at).toLocaleDateString()}</p>
-            </div>
-          </div>
-        </CardContent>
       </Card>
     </div>
   )

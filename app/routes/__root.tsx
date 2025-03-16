@@ -103,7 +103,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext()
 
   return (
-    <html>
+    <html className="dark">
       <head>
         <HeadContent />
       </head>
@@ -124,7 +124,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               className: 'font-bold underline underline-offset-8',
             }}
             className="p-2 hover:underline underline-offset-8"
-            activeOptions={{ exact: true }}
           >
             Listings
           </Link>
