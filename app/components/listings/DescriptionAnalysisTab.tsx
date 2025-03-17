@@ -19,7 +19,7 @@ export function DescriptionAnalysisTab({ analysisData, getScoreBadgeVariant }: D
   console.log('Analysis Data:', analysisData)
   if (!analysisData) {
     return (
-      <Card>
+      <Card className="border-0">
         <CardContent className="py-10 text-center">
           <p className="text-muted-foreground">No description analysis data available.</p>
         </CardContent>
@@ -28,13 +28,11 @@ export function DescriptionAnalysisTab({ analysisData, getScoreBadgeVariant }: D
   }
 
   return (
-    <Card>
+    <Card className="border-0 border-l border-b">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Description Analysis
-          <Badge variant={getScoreBadgeVariant(analysisData.score)}>
-            Score: {analysisData.score}/10
-          </Badge>
+          <Badge variant={getScoreBadgeVariant(analysisData.score)}>Score: {analysisData.score}/10</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -24,7 +24,7 @@ interface FeaturesAnalysisTabProps {
 export function FeaturesAnalysisTab({ analysisData, getScoreBadgeVariant }: FeaturesAnalysisTabProps) {
   if (!analysisData) {
     return (
-      <Card>
+      <Card className="border-0">
         <CardContent className="py-10 text-center">
           <p className="text-muted-foreground">No features analysis data available.</p>
         </CardContent>
@@ -33,13 +33,11 @@ export function FeaturesAnalysisTab({ analysisData, getScoreBadgeVariant }: Feat
   }
 
   return (
-    <Card>
+    <Card className="border-0 border-l border-b">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           Features Analysis
-          <Badge variant={getScoreBadgeVariant(analysisData.score)}>
-            Score: {analysisData.score}/10
-          </Badge>
+          <Badge variant={getScoreBadgeVariant(analysisData.score)}>Score: {analysisData.score}/10</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -49,7 +47,7 @@ export function FeaturesAnalysisTab({ analysisData, getScoreBadgeVariant }: Feat
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="features">Feature Analysis</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="summary" className="space-y-4 pt-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="border p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
@@ -62,7 +60,7 @@ export function FeaturesAnalysisTab({ analysisData, getScoreBadgeVariant }: Feat
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="details" className="space-y-4 pt-2">
             <div>
               <h3 className="font-semibold mb-1">Recommendations</h3>
@@ -73,7 +71,7 @@ export function FeaturesAnalysisTab({ analysisData, getScoreBadgeVariant }: Feat
               <p className="text-sm">{analysisData.keyword_usage}</p>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="features" className="pt-2">
             {analysisData.feature_by_feature && analysisData.feature_by_feature.length > 0 && (
               <Accordion type="multiple" className="w-full">

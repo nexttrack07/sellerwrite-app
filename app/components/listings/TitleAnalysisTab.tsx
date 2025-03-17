@@ -15,7 +15,7 @@ interface TitleAnalysisTabProps {
 export function TitleAnalysisTab({ analysisData, getScoreBadgeVariant }: TitleAnalysisTabProps) {
   if (!analysisData) {
     return (
-      <Card>
+      <Card className="border-0">
         <CardContent className="py-10 text-center">
           <p className="text-muted-foreground">No title analysis data available.</p>
         </CardContent>
@@ -24,13 +24,11 @@ export function TitleAnalysisTab({ analysisData, getScoreBadgeVariant }: TitleAn
   }
 
   return (
-    <Card>
+    <Card className="border-0 border-l border-b">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Title Analysis
-          <Badge variant={getScoreBadgeVariant(analysisData.score)}>
-            Score: {analysisData.score}/10
-          </Badge>
+          <Badge variant={getScoreBadgeVariant(analysisData.score)}>Score: {analysisData.score}/10</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

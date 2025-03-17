@@ -139,7 +139,7 @@ export function Keywords({
   }, [activeComponent])
 
   return (
-    <Card className="border-0 border-r">
+    <Card className="border-0 border-r max-h-[calc(100vh-125px)] overflow-y-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-semibold">Keywords</CardTitle>
         <div className="flex gap-2">

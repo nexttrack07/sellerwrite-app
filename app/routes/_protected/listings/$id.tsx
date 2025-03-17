@@ -424,7 +424,7 @@ function ListingDetailsPage() {
           />
         </div>
         {/* Left Column - Listing Content */}
-        <div className="col-span-6">
+        <div className="col-span-6 p-4">
           <ListingContentTab
             listing={{
               id: listingQuery.data?.listing?.id || 0,
@@ -454,7 +454,7 @@ function ListingDetailsPage() {
         </div>
 
         {/* Right Column - Analysis */}
-        <div className="space-y-6 col-span-4">
+        <div className="space-y-0 col-span-4">
           {titleAnalysisQuery.data ? (
             <TitleAnalysisTab analysisData={titleAnalysisQuery.data} getScoreBadgeVariant={getScoreBadgeVariant} />
           ) : (

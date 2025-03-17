@@ -82,11 +82,11 @@ export function ListingContentTab({
   onSelect,
 }: ListingContentTabProps) {
   return (
-    <div className="">
+    <div className="space-y-4">
       <Card
         onClick={() => onSelect && onSelect('title')}
         className={cn(
-          'border-0 border-b transition-colors cursor-pointer',
+          'transition-colors cursor-pointer',
           activeComponent === 'title' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
         )}
       >
@@ -130,7 +130,7 @@ export function ListingContentTab({
       <Card
         onClick={() => onSelect && onSelect('features')}
         className={cn(
-          'border-0 border-b transition-colors cursor-pointer',
+          'transition-colors cursor-pointer',
           activeComponent === 'features' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
         )}
       >
@@ -178,7 +178,7 @@ export function ListingContentTab({
       <Card
         onClick={() => onSelect && onSelect('description')}
         className={cn(
-          'border-0 border-b transition-colors cursor-pointer',
+          'transition-colors cursor-pointer',
           activeComponent === 'description' ? 'border-primary bg-primary/5' : 'hover:border-primary/50 border-border',
         )}
       >
